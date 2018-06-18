@@ -1,0 +1,5 @@
+﻿  stdafx.cpp
+  main.cpp
+  HelloTriangleApp.cpp
+  Generating Code...
+LINK : fatal error LNK1104: cannot open file 'opengl.lib'
