@@ -23,6 +23,21 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
+//VkResult CreateDebugReportCallbackExt(
+//	VkInstance instance,
+//	const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
+//	const VkAllocationCallbacks* pAllocator,
+//	VkDebugReportCallbackEXT* pCallback) {
+//
+//	auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+//	if (func != nullptr) {
+//		return func(instance, pCreateInfo, pAllocator, pCallback);
+//	}
+//	else {
+//		return VK_ERROR_EXTENSION_NOT_PRESENT;
+//	}
+//}
+
 class HelloTriangleApp
 {
 public:
@@ -60,9 +75,16 @@ private:
 	}
 
 	void cleanup() {
+		if (enableValidationLayers) {
+			DestroyDebugReportCallbackEXT(instance, debugReportCallback, nullptr);
+		}
+
 		vkDestroyInstance(instance, nullptr);
 		glfwDestroyWindow(window);
 		glfwTerminate();
+		
+		std::cout << std::endl << "press enter to exit..." << std::endl;
+		std::cin.get();
 	}
 
 	void createInstance() {
@@ -94,8 +116,7 @@ private:
 			createInfo.enabledLayerCount = 0;
 		}
 
-		VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
-		if (result != VK_SUCCESS) {
+		if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create instance!");
 		}
 	}
@@ -138,6 +159,36 @@ private:
 		return extensions;
 	}
 
+	// proxy function for creating debug callbacks
+	static VkResult CreateDebugReportCallbackExt(
+		VkInstance instance,
+		const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
+		const VkAllocationCallbacks* pAllocator,
+		VkDebugReportCallbackEXT* pCallback) {
+
+		auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+		if (func != nullptr) {
+			return func(instance, pCreateInfo, pAllocator, pCallback);
+		}
+		else {
+			return VK_ERROR_EXTENSION_NOT_PRESENT;
+		}
+	}
+
+	// proxy function for destroying debug callbacks
+	static void DestroyDebugReportCallbackEXT(VkInstance instance, 
+		VkDebugReportCallbackEXT callback, 
+		const VkAllocationCallbacks* pAllocator) {
+
+		auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
+		if (func != nullptr) {
+			func(instance, callback, pAllocator);
+		}
+		else {
+			throw std::runtime_error("could not find method for destroying debug callbacks");
+		}
+	}
+
 	void setupDebugCallback() {
 		if (!enableValidationLayers) return;
 
@@ -145,6 +196,10 @@ private:
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
 		createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 		createInfo.pfnCallback = debugCallback;
+
+		if (CreateDebugReportCallbackExt(instance, &createInfo, nullptr, &debugReportCallback) != VK_SUCCESS) {
+			throw std::runtime_error("failed to set up debug callback!");
+		}
 	}
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
