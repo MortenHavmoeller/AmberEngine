@@ -1,5 +1,6 @@
 #include "stdafx.h"
-#include "HelloTriangleApp.h"
+#include "WindowView.h"
+#include "RenderPipeline.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -11,15 +12,32 @@
 #include <cstdlib>
 
 int main() {
-	HelloTriangleApp app;
+	WindowView windowView;
+	RenderPipeline renderPipeline;
 
 	try {
-		app.run();
+		windowView.create();
+		renderPipeline.create(windowView);
+
+		while (!glfwWindowShouldClose(windowView.window)) {
+			glfwPollEvents();
+		}
+
+		//renderPipeline.cleanup();
+		windowView.cleanup();
+
 	}
 	catch (const std::runtime_error& e) {
 		std::cerr << e.what() << std::endl;
+		
+		std::cout << std::endl << "press enter to exit..." << std::endl;
+		std::cin.get();
+
 		return EXIT_FAILURE;
 	}
+
+	std::cout << std::endl << "press enter to exit..." << std::endl;
+	std::cin.get();
 
 	return EXIT_SUCCESS;
 }
