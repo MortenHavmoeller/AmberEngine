@@ -13,23 +13,24 @@
 
 int main() {
 	WindowView windowView;
-	RenderPipeline renderPipeline;
+	RenderPipeline renderPipeline(windowView);
 
 	try {
 		windowView.create();
-		renderPipeline.create(windowView);
+		renderPipeline.create();
 
 		while (!glfwWindowShouldClose(windowView.window)) {
 			glfwPollEvents();
 		}
 
-		//renderPipeline.cleanup();
+		renderPipeline.cleanup();
 		windowView.cleanup();
 
 	}
 	catch (const std::runtime_error& e) {
-		std::cerr << e.what() << std::endl;
-		
+		std::cerr << "error: " << e.what() << std::endl;
+		windowView.cleanup();
+
 		std::cout << std::endl << "press enter to exit..." << std::endl;
 		std::cin.get();
 
