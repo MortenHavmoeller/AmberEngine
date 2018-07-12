@@ -3,7 +3,7 @@
 
 std::vector<char> filetool::readFile(const std::string& filename) {
 
-	std::cout << "opening file " << filename << std::endl;
+	std::cout << "opening file " << filename << " ... ";
 
 	// open file
 	// ate: "at the end" of the file; so we can estimate size easily
@@ -26,6 +26,9 @@ std::vector<char> filetool::readFile(const std::string& filename) {
 		}
 
 		std::cout << std::endl;
+	}
+	else {
+		std::cout << "file good" << std::endl;
 	}
 
 	if (!file.is_open()) {

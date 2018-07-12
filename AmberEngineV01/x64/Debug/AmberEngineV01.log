@@ -1,10 +1,4 @@
-﻿  main.cpp
+﻿  RenderPipeline.cpp
 c:\program files (x86)\windows kits\10\include\10.0.16299.0\shared\minwindef.h(130): warning C4005: 'APIENTRY': macro redefinition
   d:\gitprojects\projectamber\amberengine\libraries\glfw-3.2.1.bin.win64\include-custom-vc2017\glfw\glfw3.h(98): note: see previous definition of 'APIENTRY'
-  RenderPipeline.cpp
-c:\program files (x86)\windows kits\10\include\10.0.16299.0\shared\minwindef.h(130): warning C4005: 'APIENTRY': macro redefinition
-  d:\gitprojects\projectamber\amberengine\libraries\glfw-3.2.1.bin.win64\include-custom-vc2017\glfw\glfw3.h(98): note: see previous definition of 'APIENTRY'
-d:\gitprojects\projectamber\amberengine\amberenginev01\renderpipeline.cpp(21): warning C4101: 'vertShaderModule': unreferenced local variable
-d:\gitprojects\projectamber\amberengine\amberenginev01\renderpipeline.cpp(22): warning C4101: 'fragShaderModule': unreferenced local variable
-  Generating Code...
   AmberEngineV01.vcxproj -> D:\GitProjects\ProjectAmber\AmberEngine\x64\Debug\AmberEngineV01.exe

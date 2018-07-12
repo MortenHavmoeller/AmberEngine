@@ -17,6 +17,7 @@ public:
 
 private:
 	WindowView& ownedView;
+	VkPipelineLayout pipelineLayout;
 
 	void createGraphicsPipeline(); // creates the render pipeline with shader loading
 	VkShaderModule createShaderModule(const std::vector<char>& code);
