@@ -268,7 +268,7 @@ bool WindowView::checkDeviceExtensionsSupport(VkPhysicalDevice device) {
 	return requiredExtensions.empty();
 }
 
-WindowView::QueueFamilyIndices WindowView::findQueueFamilies(VkPhysicalDevice device) {
+QueueFamilyIndices WindowView::findQueueFamilies(VkPhysicalDevice device) {
 	QueueFamilyIndices indices;
 
 	uint32_t queueFamilyCount = 0;
@@ -353,7 +353,7 @@ void WindowView::createSurface() {
 	}
 }
 
-WindowView::SwapChainSupportDetails WindowView::querySwapChainSupport(VkPhysicalDevice device) {
+SwapChainSupportDetails WindowView::querySwapChainSupport(VkPhysicalDevice device) {
 	SwapChainSupportDetails details;
 
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);

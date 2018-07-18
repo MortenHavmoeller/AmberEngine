@@ -25,5 +25,9 @@ private:
 
 	void createGraphicsPipeline(RenderPass renderPass);
 	VkShaderModule createShaderModule(const std::vector<char>& code);
+	
+	void createFramebuffers();
+	std::vector<VkFramebuffer> swapChainFramebuffers; // for use with createFramebuffers
+
 };
 

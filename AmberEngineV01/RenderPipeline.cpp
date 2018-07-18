@@ -5,9 +5,14 @@
 void RenderPipeline::create() {
 	renderPass.create();
 	createGraphicsPipeline(renderPass);
+	createFramebuffers();
 };
 
 void RenderPipeline::cleanup() {
+	for (auto framebuffer : swapChainFramebuffers) {
+		vkDestroyFramebuffer(windowView.device, framebuffer, nullptr);
+	}
+
 	renderPass.cleanup();
 	vkDestroyPipeline(windowView.device, graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(windowView.device, layout, nullptr);
@@ -87,7 +92,7 @@ void RenderPipeline::createGraphicsPipeline(RenderPass renderPass) {
 	VkPipelineMultisampleStateCreateInfo multisampling = {};
 	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisampling.sampleShadingEnable = VK_FALSE;
-	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT; // no multisampling
 	multisampling.minSampleShading = 1.0f; // optional
 	multisampling.pSampleMask = nullptr; // optional
 	multisampling.alphaToCoverageEnable = VK_FALSE; // optional
@@ -146,7 +151,7 @@ void RenderPipeline::createGraphicsPipeline(RenderPass renderPass) {
 		throw std::runtime_error("failed to create pipeline layout");
 	}
 
-	// create the actual pipeline
+	// ---- CREATE THE ACTUAL PIPELINE ----
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.stageCount = 2;
@@ -198,4 +203,24 @@ VkShaderModule RenderPipeline::createShaderModule(const std::vector<char>& code)
 	}
 	
 	return shaderModule;
+}
+
+void RenderPipeline::createFramebuffers() {
+	swapChainFramebuffers.resize(windowView.swapChainImageViews.size());
+
+	for (size_t i = 0; i < windowView.swapChainImageViews.size(); i++) {
+		VkImageView attachments[] = { windowView.swapChainImageViews[i] };
+		VkFramebufferCreateInfo framebufferInfo = {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = renderPass.vkRenderPass;
+		framebufferInfo.attachmentCount = 1;
+		framebufferInfo.pAttachments = attachments;
+		framebufferInfo.width = windowView.swapChainExtent.width;
+		framebufferInfo.height = windowView.swapChainExtent.height;
+		framebufferInfo.layers = 1;
+
+		if (vkCreateFramebuffer(windowView.device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create framebuffer!");
+		}
+	}
 }

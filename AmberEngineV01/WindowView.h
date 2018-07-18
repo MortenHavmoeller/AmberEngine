@@ -28,6 +28,22 @@ const bool enableValidationLayers = true;
 const bool enableValidationLayers = false;
 #endif
 
+// structs
+struct QueueFamilyIndices {
+	int graphicsFamily = -1;
+	int presentationFamily = -1;
+
+	bool isComplete() {
+		return graphicsFamily >= 0 && presentationFamily >= 0;
+	}
+};
+
+struct SwapChainSupportDetails {
+	VkSurfaceCapabilitiesKHR capabilities;
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> presentationModes;
+};
+
 class WindowView
 {
 public:
@@ -51,24 +67,9 @@ public:
 	void create();
 	void cleanup();
 
+	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+
 private:
-	// structs
-	struct QueueFamilyIndices {
-		int graphicsFamily = -1;
-		int presentationFamily = -1;
-
-		bool isComplete() {
-			return graphicsFamily >= 0 && presentationFamily >= 0;
-		}
-	};
-
-	struct SwapChainSupportDetails {
-		VkSurfaceCapabilitiesKHR capabilities;
-		std::vector<VkSurfaceFormatKHR> formats;
-		std::vector<VkPresentModeKHR> presentationModes;
-	};
-
-	// function declarations
 	void initWindow();
 	void initVulkan();
 	void createInstance();
@@ -80,7 +81,7 @@ private:
 	void pickPhysicalDevice();
 	int rateDeviceSuitability(VkPhysicalDevice device);
 	bool checkDeviceExtensionsSupport(VkPhysicalDevice device);
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+	
 
 	void createLogicalDevice();
 	void createSurface();
