@@ -1,5 +1,6 @@
 #pragma once
 #include "WindowView.h"
+#include "RenderPass.h"
 #include "filetool.h"
 
 #include <string>
@@ -10,16 +11,19 @@
 class RenderPipeline
 {
 public:
-	RenderPipeline(WindowView& windowView) : ownedView(windowView) {}
-	
+	RenderPipeline(WindowView& view) : windowView(view), renderPass(view) {}
+
 	void create();
 	void cleanup();
 
 private:
-	WindowView& ownedView;
-	VkPipelineLayout pipelineLayout;
+	WindowView& windowView;
 
-	void createGraphicsPipeline(); // creates the render pipeline with shader loading
+	RenderPass renderPass;
+	VkPipelineLayout layout;
+	VkPipeline graphicsPipeline;
+
+	void createGraphicsPipeline(RenderPass renderPass);
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 };
 

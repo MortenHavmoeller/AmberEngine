@@ -3,14 +3,17 @@
 #include "WindowView.h"
 
 void RenderPipeline::create() {
-	createGraphicsPipeline();
+	renderPass.create();
+	createGraphicsPipeline(renderPass);
 };
 
 void RenderPipeline::cleanup() {
-	vkDestroyPipelineLayout(ownedView.device, pipelineLayout, nullptr);
+	renderPass.cleanup();
+	vkDestroyPipeline(windowView.device, graphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(windowView.device, layout, nullptr);
 };
 
-void RenderPipeline::createGraphicsPipeline() {
+void RenderPipeline::createGraphicsPipeline(RenderPass renderPass) {
 	std::vector<char> vertShaderByteCode = filetool::readFile("../shaders/vert.spv"); // relative path starts in $(SolutionDir)/(ProjectName)
 	std::vector<char> fragShaderByteCode = filetool::readFile("../shaders/frag.spv");
 
@@ -21,7 +24,7 @@ void RenderPipeline::createGraphicsPipeline() {
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
 	vertShaderStageInfo.module = vertShaderModule;
-	vertShaderStageInfo.pName = "main"; // can point to other parts of shader code
+	vertShaderStageInfo.pName = "main"; // can point to other parts of shader code, if we want
 	
 	// optional; this handle allows initialization of shader constants
 	// allowing the compiler to remove if-statements that depend on these
@@ -50,14 +53,14 @@ void RenderPipeline::createGraphicsPipeline() {
 	VkViewport viewport = {};
 	viewport.x = 0;
 	viewport.y = 0;
-	viewport.width = (float) ownedView.swapChainExtent.width;
-	viewport.height = (float)ownedView.swapChainExtent.height;
+	viewport.width = (float) windowView.swapChainExtent.width;
+	viewport.height = (float)windowView.swapChainExtent.height;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
 	VkRect2D scissor = {};
 	scissor.offset = {0,0};
-	scissor.extent = ownedView.swapChainExtent;
+	scissor.extent = windowView.swapChainExtent;
 
 	VkPipelineViewportStateCreateInfo viewportState = {};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -111,16 +114,16 @@ void RenderPipeline::createGraphicsPipeline() {
 	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;*/
 
-	VkPipelineColorBlendStateCreateInfo colorBlend = {};
-	colorBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colorBlend.logicOpEnable = VK_FALSE;
-	colorBlend.logicOp = VK_LOGIC_OP_COPY; // optional
-	colorBlend.attachmentCount = 1;
-	colorBlend.pAttachments = &colorBlendAttachment;
-	colorBlend.blendConstants[0] = 0.0f; // optional
-	colorBlend.blendConstants[1] = 0.0f; // optional
-	colorBlend.blendConstants[2] = 0.0f; // optional
-	colorBlend.blendConstants[3] = 0.0f; // optional
+	VkPipelineColorBlendStateCreateInfo colorBlending = {};
+	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlending.logicOpEnable = VK_FALSE;
+	colorBlending.logicOp = VK_LOGIC_OP_COPY; // optional
+	colorBlending.attachmentCount = 1;
+	colorBlending.pAttachments = &colorBlendAttachment;
+	colorBlending.blendConstants[0] = 0.0f; // optional
+	colorBlending.blendConstants[1] = 0.0f; // optional
+	colorBlending.blendConstants[2] = 0.0f; // optional
+	colorBlending.blendConstants[3] = 0.0f; // optional
 
 	// example dynamic pipeline change
 	/*VkDynamicState dynamicStates[] = {
@@ -139,12 +142,47 @@ void RenderPipeline::createGraphicsPipeline() {
 	pipelineLayoutInfo.pushConstantRangeCount = 0; // optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr; // optional
 
-	if (vkCreatePipelineLayout(ownedView.device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(windowView.device, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create pipeline layout");
 	}
 
-	vkDestroyShaderModule(ownedView.device, vertShaderModule, nullptr);
-	vkDestroyShaderModule(ownedView.device, fragShaderModule, nullptr);
+	// create the actual pipeline
+	VkGraphicsPipelineCreateInfo pipelineInfo = {};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages;
+
+	pipelineInfo.pVertexInputState = &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState = &inputAssembly;
+	pipelineInfo.pViewportState = &viewportState;
+	pipelineInfo.pRasterizationState = &rasterizer;
+	pipelineInfo.pMultisampleState = &multisampling;
+	pipelineInfo.pDepthStencilState = nullptr; // optional
+	pipelineInfo.pColorBlendState = &colorBlending;
+	pipelineInfo.pDynamicState = nullptr; // optional
+
+	pipelineInfo.layout = layout;
+	pipelineInfo.renderPass = renderPass.vkRenderPass;
+	pipelineInfo.subpass = 0;
+
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // optional
+	pipelineInfo.basePipelineIndex = -1; // optional
+
+	// there are also:
+	// pipelineInfo.basePipelineHandle
+	// pipelineInfo.basePipelineIndex
+	// which allows for deriving from existing pipelines
+
+	// seconds argument 'VK_NULL_HANDLE' is a VkPipelineCache object handle
+	// that argument can be used to re-use data from pipeline creation between calls
+	// significantly speeding up generation of new pipelines
+	
+	if (vkCreateGraphicsPipelines(windowView.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create graphics pipeline!");
+	}
+
+	vkDestroyShaderModule(windowView.device, vertShaderModule, nullptr);
+	vkDestroyShaderModule(windowView.device, fragShaderModule, nullptr);
 }
 
 VkShaderModule RenderPipeline::createShaderModule(const std::vector<char>& code) {
@@ -155,7 +193,7 @@ VkShaderModule RenderPipeline::createShaderModule(const std::vector<char>& code)
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 	
 	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(ownedView.device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+	if (vkCreateShaderModule(windowView.device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create shader module!");
 	}
 	
