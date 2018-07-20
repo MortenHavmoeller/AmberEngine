@@ -4,14 +4,14 @@
 class RenderPass
 {
 public:
-	RenderPass(WindowView& view) : windowView(view) {}
-	
+	RenderPass() {}
+
 	VkRenderPass vkRenderPass;
 	VkPipelineLayout pipelineLayout;
 
-	void create();
+	void create(WindowView* pView);
 	void cleanup();
 private:
-	WindowView& windowView;
+	WindowView* pWindowView;
 };
 

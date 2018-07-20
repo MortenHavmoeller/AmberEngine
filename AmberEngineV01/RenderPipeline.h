@@ -12,24 +12,22 @@
 class RenderPipeline
 {
 public:
-	RenderPipeline(WindowView& view) : windowView(view), renderPass(view) {}
-
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffers;
 
-	void create();
+	void create(WindowView* view);
 	void cleanup();
 
 	void drawFrame();
 
 private:
-	WindowView& windowView;
+	WindowView* pWindowView;
 
 	RenderPass renderPass;
 	VkPipelineLayout layout;
 	VkPipeline graphicsPipeline;
 
-	void createGraphicsPipeline(RenderPass renderPass);
+	void createGraphicsPipeline();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	
 	void createFramebuffers();

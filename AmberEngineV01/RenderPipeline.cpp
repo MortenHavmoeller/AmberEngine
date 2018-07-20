@@ -2,9 +2,11 @@
 #include "RenderPipeline.h"
 #include "WindowView.h"
 
-void RenderPipeline::create() {
-	renderPass.create();
-	createGraphicsPipeline(renderPass);
+void RenderPipeline::create(WindowView* pView) {
+	pWindowView = pView;
+
+	renderPass.create(pView);
+	createGraphicsPipeline();
 	createFramebuffers();
 	createCommandPool();
 	createCommandBuffers();
@@ -12,26 +14,25 @@ void RenderPipeline::create() {
 };
 
 void RenderPipeline::cleanup() {
-	vkDestroyCommandPool(windowView.device, commandPool, nullptr);
+	vkDestroyCommandPool(pWindowView->device, commandPool, nullptr);
 
 	for (auto framebuffer : swapChainFramebuffers) {
-		vkDestroyFramebuffer(windowView.device, framebuffer, nullptr);
+		vkDestroyFramebuffer(pWindowView->device, framebuffer, nullptr);
 	}
 
 	renderPass.cleanup();
-	vkDestroyPipeline(windowView.device, graphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(windowView.device, layout, nullptr);
+	vkDestroyPipeline(pWindowView->device, graphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(pWindowView->device, layout, nullptr);
 
-	vkDestroySemaphore(windowView.device, renderFinishedSemaphore, nullptr);
-	vkDestroySemaphore(windowView.device, imageAvailableSemaphore, nullptr);
+	vkDestroySemaphore(pWindowView->device, renderFinishedSemaphore, nullptr);
+	vkDestroySemaphore(pWindowView->device, imageAvailableSemaphore, nullptr);
 };
 
 void RenderPipeline::drawFrame() {
-
 	// 1: get an image from the swap chain
 	uint32_t imageIndex;
 	uint64_t uint64max = (std::numeric_limits<uint64_t>::max)();
-	vkAcquireNextImageKHR(windowView.device, windowView.swapChain, uint64max, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	vkAcquireNextImageKHR(pWindowView->device, pWindowView->swapChain, uint64max, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
 	// 2: submitting the command buffer
 	VkSubmitInfo submitInfo = {};
@@ -50,7 +51,7 @@ void RenderPipeline::drawFrame() {
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	if (vkQueueSubmit(windowView.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+	if (vkQueueSubmit(pWindowView->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 
@@ -59,17 +60,17 @@ void RenderPipeline::drawFrame() {
 	presentationInfo.waitSemaphoreCount = 1;
 	presentationInfo.pWaitSemaphores = signalSemaphores; // render finished semaphore
 
-	VkSwapchainKHR swapChains[] = { windowView.swapChain };
+	VkSwapchainKHR swapChains[] = { pWindowView->swapChain };
 	presentationInfo.swapchainCount = 1;
 	presentationInfo.pSwapchains = swapChains;
 	presentationInfo.pImageIndices = &imageIndex;
 	presentationInfo.pResults = nullptr; // optional; handle to receive an array of VkResult if an array of swap chains is used
 
 	// request presentation of an image to the swap chain
-	vkQueuePresentKHR(windowView.presentationQueue, &presentationInfo);
+	vkQueuePresentKHR(pWindowView->presentationQueue, &presentationInfo);
 }
 
-void RenderPipeline::createGraphicsPipeline(RenderPass renderPass) {
+void RenderPipeline::createGraphicsPipeline() {
 	std::vector<char> vertShaderByteCode = filetool::readFile("../shaders/vert.spv"); // relative path starts in $(SolutionDir)/(ProjectName)
 	std::vector<char> fragShaderByteCode = filetool::readFile("../shaders/frag.spv");
 
@@ -109,14 +110,14 @@ void RenderPipeline::createGraphicsPipeline(RenderPass renderPass) {
 	VkViewport viewport = {};
 	viewport.x = 0;
 	viewport.y = 0;
-	viewport.width = (float)windowView.swapChainExtent.width;
-	viewport.height = (float)windowView.swapChainExtent.height;
+	viewport.width = (float)pWindowView->swapChainExtent.width;
+	viewport.height = (float)pWindowView->swapChainExtent.height;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
 	VkRect2D scissor = {};
 	scissor.offset = { 0,0 };
-	scissor.extent = windowView.swapChainExtent;
+	scissor.extent = pWindowView->swapChainExtent;
 
 	VkPipelineViewportStateCreateInfo viewportState = {};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -198,7 +199,7 @@ void RenderPipeline::createGraphicsPipeline(RenderPass renderPass) {
 	pipelineLayoutInfo.pushConstantRangeCount = 0; // optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr; // optional
 
-	if (vkCreatePipelineLayout(windowView.device, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(pWindowView->device, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create pipeline layout");
 	}
 
@@ -233,12 +234,12 @@ void RenderPipeline::createGraphicsPipeline(RenderPass renderPass) {
 	// that argument can be used to re-use data from pipeline creation between calls
 	// significantly speeding up generation of new pipelines
 
-	if (vkCreateGraphicsPipelines(windowView.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+	if (vkCreateGraphicsPipelines(pWindowView->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
 
-	vkDestroyShaderModule(windowView.device, vertShaderModule, nullptr);
-	vkDestroyShaderModule(windowView.device, fragShaderModule, nullptr);
+	vkDestroyShaderModule(pWindowView->device, vertShaderModule, nullptr);
+	vkDestroyShaderModule(pWindowView->device, fragShaderModule, nullptr);
 }
 
 VkShaderModule RenderPipeline::createShaderModule(const std::vector<char>& code) {
@@ -249,7 +250,7 @@ VkShaderModule RenderPipeline::createShaderModule(const std::vector<char>& code)
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
 	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(windowView.device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+	if (vkCreateShaderModule(pWindowView->device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create shader module!");
 	}
 
@@ -257,34 +258,34 @@ VkShaderModule RenderPipeline::createShaderModule(const std::vector<char>& code)
 }
 
 void RenderPipeline::createFramebuffers() {
-	swapChainFramebuffers.resize(windowView.swapChainImageViews.size());
+	swapChainFramebuffers.resize(pWindowView->swapChainImageViews.size());
 
-	for (size_t i = 0; i < windowView.swapChainImageViews.size(); i++) {
-		VkImageView attachments[] = { windowView.swapChainImageViews[i] };
+	for (size_t i = 0; i < pWindowView->swapChainImageViews.size(); i++) {
+		VkImageView attachments[] = { pWindowView->swapChainImageViews[i] };
 		VkFramebufferCreateInfo framebufferInfo = {};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.renderPass = renderPass.vkRenderPass;
 		framebufferInfo.attachmentCount = 1;
 		framebufferInfo.pAttachments = attachments;
-		framebufferInfo.width = windowView.swapChainExtent.width;
-		framebufferInfo.height = windowView.swapChainExtent.height;
+		framebufferInfo.width = pWindowView->swapChainExtent.width;
+		framebufferInfo.height = pWindowView->swapChainExtent.height;
 		framebufferInfo.layers = 1;
 
-		if (vkCreateFramebuffer(windowView.device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
+		if (vkCreateFramebuffer(pWindowView->device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create framebuffer!");
 		}
 	}
 }
 
 void RenderPipeline::createCommandPool() {
-	QueueFamilyIndices queueFamilyIndices = windowView.findQueueFamilies(windowView.physicalDevice);
+	QueueFamilyIndices queueFamilyIndices = pWindowView->findQueueFamilies(pWindowView->physicalDevice);
 
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
 	poolInfo.flags = 0; // optional
 
-	if (vkCreateCommandPool(windowView.device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+	if (vkCreateCommandPool(pWindowView->device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create command pool!");
 	}
 }
@@ -306,7 +307,7 @@ void RenderPipeline::createCommandBuffers() {
 
 	cmdBufferAllocateInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
-	if (vkAllocateCommandBuffers(windowView.device, &cmdBufferAllocateInfo, commandBuffers.data()) != VK_SUCCESS) {
+	if (vkAllocateCommandBuffers(pWindowView->device, &cmdBufferAllocateInfo, commandBuffers.data()) != VK_SUCCESS) {
 		throw std::runtime_error("failed to allocate command buffers!");
 	}
 
@@ -325,7 +326,7 @@ void RenderPipeline::createCommandBuffers() {
 		renderPassInfo.renderPass = renderPass.vkRenderPass;
 		renderPassInfo.framebuffer = swapChainFramebuffers[i];
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = windowView.swapChainExtent;
+		renderPassInfo.renderArea.extent = pWindowView->swapChainExtent;
 
 		// used by VK_ATTACHMENT_LOAD_OP_CLEAR
 		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f }; // black
@@ -352,8 +353,8 @@ void RenderPipeline::createSemaphores() {
 	VkSemaphoreCreateInfo semaphoreInfo = {};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	if (vkCreateSemaphore(windowView.device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-		vkCreateSemaphore(windowView.device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS) {
+	if (vkCreateSemaphore(pWindowView->device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
+		vkCreateSemaphore(pWindowView->device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS) {
 
 		throw std::runtime_error("failed to create semaphores!");
 	}
