@@ -16,16 +16,18 @@ int main() {
 	RenderPipeline renderPipeline(windowView);
 
 	try {
-		windowView.create();
 		renderPipeline.create();
+		windowView.create();
 
 		while (!glfwWindowShouldClose(windowView.window)) {
 			glfwPollEvents();
+			renderPipeline.drawFrame();
 		}
+
+		vkDeviceWaitIdle(windowView.device);
 
 		renderPipeline.cleanup();
 		windowView.cleanup();
-
 	}
 	catch (const std::runtime_error& e) {
 		std::cerr << "error: " << e.what() << std::endl;

@@ -150,7 +150,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="filetool.h" />
-    <ClInclude Include="Renderer.h" />
     <ClInclude Include="RenderPass.h" />
     <ClInclude Include="RenderPipeline.h" />
     <ClInclude Include="WindowView.h" />
@@ -159,7 +158,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="filetool.cpp" />
-    <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="RenderPass.cpp" />
     <ClCompile Include="RenderPipeline.cpp" />
     <ClCompile Include="WindowView.cpp" />

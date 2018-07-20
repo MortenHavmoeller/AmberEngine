@@ -493,7 +493,7 @@ void WindowView::createSwapChain() {
 	}
 
 	vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
-	swapChainImages.resize(imageCount);
+	swapChainImages.resize(imageCount); // eventually defines command buffer size via swapChainImageViews
 	vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
 
 	swapChainImageFormat = surfaceFormat.format;

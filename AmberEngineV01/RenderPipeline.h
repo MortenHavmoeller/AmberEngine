@@ -7,14 +7,20 @@
 #include <fstream>
 #include <windows.h>
 #include <filesystem>
+#include <cstdlib>
 
 class RenderPipeline
 {
 public:
 	RenderPipeline(WindowView& view) : windowView(view), renderPass(view) {}
 
+	VkCommandPool commandPool;
+	std::vector<VkCommandBuffer> commandBuffers;
+
 	void create();
 	void cleanup();
+
+	void drawFrame();
 
 private:
 	WindowView& windowView;
@@ -29,5 +35,11 @@ private:
 	void createFramebuffers();
 	std::vector<VkFramebuffer> swapChainFramebuffers; // for use with createFramebuffers
 
+	VkSemaphore imageAvailableSemaphore;
+	VkSemaphore renderFinishedSemaphore;
+
+	void createCommandPool();
+	void createCommandBuffers();
+	void createSemaphores();
 };
 
