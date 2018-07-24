@@ -1,6 +1,7 @@
 #pragma once
 #include <chrono>
 #include <GLFW/glfw3.h>
+#include <stdexcept>
 
 class Time
 {
@@ -12,19 +13,20 @@ public:
 	double now();
 	double delta();
 
-	void init(uint32_t targetFramerate);
+	void init(double targetFramerate, bool fixed);
 	void startOfFrame();
-	void updateDelta();
+	void frameOperationsDone();
 
-	double timeUntilTargetDelta();
+	double timeUntilNextFrame();
 	
 private:
+	bool fixedTime_;
 	double firstRecordedTime;
 
 	double lastRecordedTime;
 	double delta_;
 
-	uint32_t targetFramerate_;
+	double targetFramerate_;
 	double targetDelta_;
 };
 

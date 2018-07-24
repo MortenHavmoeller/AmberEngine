@@ -4,36 +4,35 @@
 #include <thread>
 #include <chrono>
 
-Game::Game()
-{
-}
-
-
-Game::~Game()
-{
-}
-
-int Game::run()
-{
+int Game::run() {
 	WindowView windowView;
 	RenderPipeline renderPipeline;
+	World world;
 	Time time;
-	
+
+	std::cout << "Game is type: " << applicationType << std::endl;
+
 	try {
 		windowView.create();
 		renderPipeline.create(&windowView);
-		time.init(50);
+		time.init(1.5, false);
 
 		while (!glfwWindowShouldClose(windowView.window)) {
 			time.startOfFrame();
+			//std::cout << "since last frame (delta): " << time.delta() << " --- ";
 
 			glfwPollEvents();
+
+			world.update(); // game state update
+
 			renderPipeline.drawFrame();
 
-			time.updateDelta();
-			double timeLeft = time.timeUntilTargetDelta();
-			std::this_thread::sleep_for(std::chrono::milliseconds((uint32_t)(1000 * timeLeft)));
-			time.updateDelta();
+			time.frameOperationsDone();
+			//std::cout << "frame ops took: " << time.delta() << std::endl;
+
+			std::this_thread::sleep_for(
+				std::chrono::milliseconds((uint32_t)(1000 * time.timeUntilNextFrame()))
+			);
 		}
 
 		vkDeviceWaitIdle(windowView.device);
@@ -43,7 +42,6 @@ int Game::run()
 	}
 	catch (const std::runtime_error& e) {
 		std::cerr << "error: " << e.what() << std::endl;
-		windowView.cleanup();
 
 		std::cout << std::endl << "press enter to exit..." << std::endl;
 		std::cin.get();

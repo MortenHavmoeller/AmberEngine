@@ -10,7 +10,7 @@ void RenderPipeline::create(WindowView* pView) {
 	createFramebuffers();
 	createCommandPool();
 	createCommandBuffers();
-	createSemaphores();
+	createSyncObjects();
 };
 
 void RenderPipeline::cleanup() {
@@ -24,20 +24,29 @@ void RenderPipeline::cleanup() {
 	vkDestroyPipeline(pWindowView->device, graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(pWindowView->device, layout, nullptr);
 
-	vkDestroySemaphore(pWindowView->device, renderFinishedSemaphore, nullptr);
-	vkDestroySemaphore(pWindowView->device, imageAvailableSemaphore, nullptr);
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		vkDestroySemaphore(pWindowView->device, renderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(pWindowView->device, imageAvailableSemaphores[i], nullptr);
+		vkDestroyFence(pWindowView->device, inFlightFences[i], nullptr);
+	}
+	
 };
 
 void RenderPipeline::drawFrame() {
-	// 1: get an image from the swap chain
-	uint32_t imageIndex;
 	uint64_t uint64max = (std::numeric_limits<uint64_t>::max)();
-	vkAcquireNextImageKHR(pWindowView->device, pWindowView->swapChain, uint64max, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
-	// 2: submitting the command buffer
+	// wait for a fence to become signaled; fences are signaled as drawing operations finish
+	vkWaitForFences(pWindowView->device, 1, &inFlightFences[currentFrame], VK_TRUE, uint64max);
+	vkResetFences(pWindowView->device, 1, &inFlightFences[currentFrame]);
+
+	// get an image from the swap chain
+	uint32_t imageIndex;
+	vkAcquireNextImageKHR(pWindowView->device, pWindowView->swapChain, uint64max, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+	// submitting the command buffer
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	VkSemaphore waitSemaphores[] = { imageAvailableSemaphore }; // array of 1
+	VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] }; // array of 1
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
@@ -47,11 +56,12 @@ void RenderPipeline::drawFrame() {
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
 
-	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore }; // array of 1
+	VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] }; // array of 1
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	if (vkQueueSubmit(pWindowView->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+	// submit queue with fences
+	if (vkQueueSubmit(pWindowView->graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 
@@ -68,6 +78,11 @@ void RenderPipeline::drawFrame() {
 
 	// request presentation of an image to the swap chain
 	vkQueuePresentKHR(pWindowView->presentationQueue, &presentationInfo);
+
+	// wait for submitted work to finish; not optimal
+	//vkQueueWaitIdle(pWindowView->presentationQueue);
+
+	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void RenderPipeline::createGraphicsPipeline() {
@@ -349,13 +364,24 @@ void RenderPipeline::createCommandBuffers() {
 	}
 }
 
-void RenderPipeline::createSemaphores() {
+void RenderPipeline::createSyncObjects() {
+	imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
 	VkSemaphoreCreateInfo semaphoreInfo = {};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	if (vkCreateSemaphore(pWindowView->device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-		vkCreateSemaphore(pWindowView->device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS) {
+	VkFenceCreateInfo fenceInfo = {};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // start fence in signaled state
 
-		throw std::runtime_error("failed to create semaphores!");
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		if (vkCreateSemaphore(pWindowView->device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+			vkCreateSemaphore(pWindowView->device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
+			vkCreateFence(pWindowView->device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
+
+			throw std::runtime_error("failed to create synchronization objects for CPU-GPU sync!");
+		}
 	}
 }

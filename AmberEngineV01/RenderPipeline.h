@@ -9,6 +9,8 @@
 #include <filesystem>
 #include <cstdlib>
 
+const int MAX_FRAMES_IN_FLIGHT = 2;
+
 class RenderPipeline
 {
 public:
@@ -33,11 +35,14 @@ private:
 	void createFramebuffers();
 	std::vector<VkFramebuffer> swapChainFramebuffers; // for use with createFramebuffers
 
-	VkSemaphore imageAvailableSemaphore;
-	VkSemaphore renderFinishedSemaphore;
+	size_t currentFrame = 0;
+
+	std::vector<VkSemaphore> imageAvailableSemaphores; // image acquired from swap chain
+	std::vector<VkSemaphore> renderFinishedSemaphores; // image ready for presentation to surface
+	std::vector<VkFence> inFlightFences; // fences to block CPU command submissiong from outrunning GPU rendering
 
 	void createCommandPool();
 	void createCommandBuffers();
-	void createSemaphores();
+	void createSyncObjects();
 };
 
