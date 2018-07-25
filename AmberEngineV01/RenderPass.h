@@ -1,5 +1,6 @@
 #pragma once
 #include "WindowView.h"
+#include "Device.h"
 
 class RenderPass
 {
@@ -9,9 +10,10 @@ public:
 	VkRenderPass vkRenderPass;
 	VkPipelineLayout pipelineLayout;
 
-	void create(WindowView* pView);
+	void create(WindowView* view, Device* device);
 	void cleanup();
 private:
 	WindowView* pWindowView;
+	Device* pDevice;
 };
 

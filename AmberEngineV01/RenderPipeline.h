@@ -2,6 +2,8 @@
 #include "WindowView.h"
 #include "RenderPass.h"
 #include "filetool.h"
+#include "WindowView.h"
+#include "Device.h"
 
 #include <string>
 #include <fstream>
@@ -17,13 +19,14 @@ public:
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffers;
 
-	void create(WindowView* view);
+	void create(WindowView* view, Device* device);
 	void cleanup();
 
 	void drawFrame();
 
 private:
 	WindowView* pWindowView;
+	Device* pDevice;
 
 	RenderPass renderPass;
 	VkPipelineLayout layout;

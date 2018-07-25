@@ -6,15 +6,19 @@
 
 int Game::run() {
 	WindowView windowView;
+	Device device;
 	RenderPipeline renderPipeline;
+
 	World world;
 	Time time;
 
-	std::cout << "Game is type: " << applicationType << std::endl;
+	std::cout << "Game is type: " << AmbEnums::getAmbAppTypeName(ambAppType) << std::endl;
 
 	try {
 		windowView.create();
-		renderPipeline.create(&windowView);
+		device.create(&windowView);
+		renderPipeline.create(&windowView, &device);
+
 		time.init(50.0, true);
 
 		while (!glfwWindowShouldClose(windowView.window)) {
@@ -35,9 +39,10 @@ int Game::run() {
 			);
 		}
 
-		vkDeviceWaitIdle(windowView.device);
+		vkDeviceWaitIdle(device.vkDevice); // wait for Vulkan to finish its last work
 
 		renderPipeline.cleanup();
+		device.cleanup();
 		windowView.cleanup();
 	}
 	catch (const std::runtime_error& e) {

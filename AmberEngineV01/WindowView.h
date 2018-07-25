@@ -28,7 +28,6 @@ const bool enableValidationLayers = true;
 const bool enableValidationLayers = false;
 #endif
 
-// structs
 struct QueueFamilyIndices {
 	int graphicsFamily = -1;
 	int presentationFamily = -1;
@@ -36,12 +35,6 @@ struct QueueFamilyIndices {
 	bool isComplete() {
 		return graphicsFamily >= 0 && presentationFamily >= 0;
 	}
-};
-
-struct SwapChainSupportDetails {
-	VkSurfaceCapabilitiesKHR capabilities;
-	std::vector<VkSurfaceFormatKHR> formats;
-	std::vector<VkPresentModeKHR> presentationModes;
 };
 
 class WindowView
@@ -53,21 +46,8 @@ public:
 	VkDebugReportCallbackEXT debugReportCallback;
 	VkSurfaceKHR surface;
 
-	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-	VkDevice device;
-
-	VkQueue graphicsQueue;
-	VkQueue presentationQueue;
-	VkSwapchainKHR swapChain;
-	std::vector<VkImage> swapChainImages;
-	VkFormat swapChainImageFormat;
-	VkExtent2D swapChainExtent;
-	std::vector<VkImageView> swapChainImageViews;
-
 	void create();
 	void cleanup();
-
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
 private:
 	void initWindow();
@@ -78,21 +58,8 @@ private:
 	std::vector<const char*> getRequiredExtensions();
 	void setupDebugCallback();
 
-	void pickPhysicalDevice();
-	int rateDeviceSuitability(VkPhysicalDevice device);
-	bool checkDeviceExtensionsSupport(VkPhysicalDevice device);
-	
-
-	void createLogicalDevice();
 	void createSurface();
-
-	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
-	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentationModes);
-	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-	void createSwapChain();
-	void createImageViews();
-
+	
 	// debug callback function declarations
 	static VkResult CreateDebugReportCallbackExt(
 		VkInstance instance,

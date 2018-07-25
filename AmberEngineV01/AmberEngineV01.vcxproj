@@ -152,6 +152,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AmbEnums.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="Entity.h" />
@@ -160,6 +161,7 @@
     <ClInclude Include="PresentationEntity.h" />
     <ClInclude Include="RenderPass.h" />
     <ClInclude Include="RenderPipeline.h" />
+    <ClInclude Include="SwapChain.h" />
     <ClInclude Include="Time.h" />
     <ClInclude Include="WindowView.h" />
     <ClInclude Include="stdafx.h" />
@@ -175,6 +177,7 @@
     <ClCompile Include="PresentationEntity.cpp" />
     <ClCompile Include="RenderPass.cpp" />
     <ClCompile Include="RenderPipeline.cpp" />
+    <ClCompile Include="SwapChain.cpp" />
     <ClCompile Include="Time.cpp" />
     <ClCompile Include="WindowView.cpp" />
     <ClCompile Include="main.cpp" />

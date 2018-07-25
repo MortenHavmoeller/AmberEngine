@@ -5,6 +5,8 @@
 #include "RenderPipeline.h"
 #include "Time.h"
 #include "World.h"
+#include "Device.h"
+#include "AmbEnums.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -15,20 +17,13 @@
 #include <iostream>
 #include <cstdlib>
 
-enum AmbAppType {
-	APPLICATION_TYPE_UNDEFINED = 0,
-	APPLICATION_TYPE_CLIENT = 1, 
-	APPLICATION_TYPE_SERVER = 2, 
-	APPLICATION_TYPE_SERVER_AND_CLIENT = 3 // 1 + 2
-};
-
 class Game
 {
 public:
-	Game(AmbAppType type) : applicationType(type) {}
+	Game(AmbAppType type) : ambAppType(type) {}
 	~Game() {}
 
-	AmbAppType applicationType;
+	AmbAppType ambAppType;
 
 	int run();
 };
