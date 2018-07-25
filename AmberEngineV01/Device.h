@@ -1,5 +1,6 @@
 #pragma once
 #include "WindowView.h"
+#include "VulkanStructs.h"
 #include "SwapChain.h"
 
 #define GLFW_INCLUDE_VULKAN
@@ -27,6 +28,8 @@ public:
 
 	void create(WindowView* view);
 	void cleanup();
+
+	void recreateSwapChain();
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 private:

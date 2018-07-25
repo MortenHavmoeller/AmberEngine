@@ -5,7 +5,8 @@ void RenderPipeline::create(WindowView* view, Device* device) {
 	pWindowView = view;
 	pDevice = device;
 
-	renderPass.create(view, device);
+	renderPass.create(pWindowView, pDevice);
+
 	createGraphicsPipeline();
 	createFramebuffers();
 	createCommandPool();
@@ -20,9 +21,9 @@ void RenderPipeline::cleanup() {
 		vkDestroyFramebuffer(pDevice->vkDevice, framebuffer, nullptr);
 	}
 
-	renderPass.cleanup();
 	vkDestroyPipeline(pDevice->vkDevice, graphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(pDevice->vkDevice, layout, nullptr);
+	vkDestroyPipelineLayout(pDevice->vkDevice, pipelineLayout, nullptr);
+	renderPass.cleanup();
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroySemaphore(pDevice->vkDevice, renderFinishedSemaphores[i], nullptr);
@@ -31,6 +32,39 @@ void RenderPipeline::cleanup() {
 	}
 	
 };
+
+void RenderPipeline::recreate() {
+	vkDeviceWaitIdle(pDevice->vkDevice); // wait for previous operations to finish
+	
+	// CLEANUP
+	for (auto framebuffer : swapChainFramebuffers) {
+		vkDestroyFramebuffer(pDevice->vkDevice, framebuffer, nullptr);
+	}
+
+	// allows re-use of the existing command pool
+	vkFreeCommandBuffers(pDevice->vkDevice, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+
+	vkDestroyPipeline(pDevice->vkDevice, graphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(pDevice->vkDevice, pipelineLayout, nullptr);
+
+	renderPass.cleanup();
+
+	// RECREATE
+	pDevice->recreateSwapChain();
+	// effect:
+	// cleanup(); - though leaving the device itself
+	// createSwapChain();
+	// createImageViews();
+
+	
+	renderPass.create(pWindowView, pDevice);
+	// effect:
+	// createRenderPass();
+
+	createGraphicsPipeline();
+	createFramebuffers();
+	createCommandBuffers();
+}
 
 void RenderPipeline::drawFrame() {
 	uint64_t uint64max = (std::numeric_limits<uint64_t>::max)();
@@ -41,7 +75,16 @@ void RenderPipeline::drawFrame() {
 
 	// get an image from the swap chain
 	uint32_t imageIndex;
-	vkAcquireNextImageKHR(pDevice->vkDevice, pDevice->swapChain, uint64max, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+	VkResult result = vkAcquireNextImageKHR(pDevice->vkDevice, pDevice->swapChain, uint64max, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		recreate();
+		return;
+	}
+	else if (result != VK_SUCCESS) {
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}
 
 	// submitting the command buffer
 	VkSubmitInfo submitInfo = {};
@@ -77,10 +120,14 @@ void RenderPipeline::drawFrame() {
 	presentationInfo.pResults = nullptr; // optional; handle to receive an array of VkResult if an array of swap chains is used
 
 	// request presentation of an image to the swap chain
-	vkQueuePresentKHR(pDevice->presentationQueue, &presentationInfo);
+	result = vkQueuePresentKHR(pDevice->presentationQueue, &presentationInfo);
 
-	// wait for submitted work to finish; not optimal
-	//vkQueueWaitIdle(pWindowView->presentationQueue);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		recreate();
+	}
+	else if (result != VK_SUCCESS) {
+		throw std::runtime_error("failed to present swap chain image!");
+	}
 
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
@@ -212,9 +259,9 @@ void RenderPipeline::createGraphicsPipeline() {
 	pipelineLayoutInfo.setLayoutCount = 0; // optional
 	pipelineLayoutInfo.pSetLayouts = nullptr; // optional
 	pipelineLayoutInfo.pushConstantRangeCount = 0; // optional
-	pipelineLayoutInfo.pPushConstantRanges = nullptr; // optional
+	pipelineLayoutInfo.pPushConstantRanges = nullptr; // 
 
-	if (vkCreatePipelineLayout(pDevice->vkDevice, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(pDevice->vkDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create pipeline layout");
 	}
 
@@ -233,7 +280,7 @@ void RenderPipeline::createGraphicsPipeline() {
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = nullptr; // optional
 
-	pipelineInfo.layout = layout;
+	pipelineInfo.layout = pipelineLayout;
 	pipelineInfo.renderPass = renderPass.vkRenderPass;
 	pipelineInfo.subpass = 0;
 

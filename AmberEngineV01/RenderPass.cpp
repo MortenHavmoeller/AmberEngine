@@ -57,6 +57,5 @@ void RenderPass::create(WindowView* view, Device* device) {
 }
 
 void RenderPass::cleanup() {
-	vkDestroyPipelineLayout(pDevice->vkDevice, pipelineLayout, nullptr);
 	vkDestroyRenderPass(pDevice->vkDevice, vkRenderPass, nullptr);
 }

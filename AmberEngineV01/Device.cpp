@@ -27,6 +27,18 @@ void Device::cleanup() {
 	vkDestroyDevice(vkDevice, nullptr);
 }
 
+// should be called from RenderPipeline::recreate() only
+void Device::recreateSwapChain() {
+	for (auto imageView : swapChainImageViews) {
+		vkDestroyImageView(vkDevice, imageView, nullptr);
+	}
+
+	vkDestroySwapchainKHR(vkDevice, swapChain, nullptr);
+
+	createSwapChain();
+	createImageViews();
+}
+
 
 void Device::pickPhysicalDevice() {
 	uint32_t deviceCount = 0;

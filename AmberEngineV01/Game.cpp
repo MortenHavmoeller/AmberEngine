@@ -12,7 +12,7 @@ int Game::run() {
 	World world;
 	Time time;
 
-	std::cout << "Game is type: " << AmbEnums::getAmbAppTypeName(ambAppType) << std::endl;
+	std::cout << "Game application type: " << AmbEnums::getAmbAppTypeName(ambAppType) << std::endl;
 
 	try {
 		windowView.create();
@@ -23,16 +23,12 @@ int Game::run() {
 
 		while (!glfwWindowShouldClose(windowView.window)) {
 			time.startOfFrame();
-			//std::cout << "since last frame (delta): " << time.delta() << " --- ";
 
-			glfwPollEvents();
-
+			glfwPollEvents(); // check window events
 			world.update(); // game state update
-
-			renderPipeline.drawFrame();
+			renderPipeline.drawFrame(); // render to screen
 
 			time.frameOperationsDone();
-			//std::cout << "frame ops took: " << time.delta() << std::endl;
 
 			std::this_thread::sleep_for(
 				std::chrono::milliseconds((uint32_t)(1000 * time.timeUntilNextFrame()))
@@ -54,8 +50,11 @@ int Game::run() {
 		return EXIT_FAILURE;
 	}
 
+#ifdef _DEBUG
+	// allow developer to see printout before closing console
 	std::cout << std::endl << "press enter to exit..." << std::endl;
 	std::cin.get();
+#endif
 
 	return EXIT_SUCCESS;
 }

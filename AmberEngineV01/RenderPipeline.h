@@ -22,6 +22,8 @@ public:
 	void create(WindowView* view, Device* device);
 	void cleanup();
 
+	void recreate();
+
 	void drawFrame();
 
 private:
@@ -29,7 +31,7 @@ private:
 	Device* pDevice;
 
 	RenderPass renderPass;
-	VkPipelineLayout layout;
+	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
 
 	void createGraphicsPipeline();

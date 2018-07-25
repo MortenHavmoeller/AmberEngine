@@ -17,5 +17,6 @@ public:
 		case 2: return "APPLICATION_TYPE_SERVER";
 		case 3: return "APPLICATION_TYPE_SERVER_AND_CLIENT";
 		}
+		return "UNKNOWN_VALUE";
 	}
 };

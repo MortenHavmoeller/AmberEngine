@@ -13,11 +13,14 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\Enums">
-      <UniqueIdentifier>{9e49f865-161f-4e27-8aab-7c0069f6fc5d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Enums">
       <UniqueIdentifier>{5dcfa351-c569-4964-b212-f7e85f938444}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\VulkanObjects">
+      <UniqueIdentifier>{0a3410e5-2c03-493c-95bd-e9d476c16e2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\VulkanObjects">
+      <UniqueIdentifier>{45e79914-cff6-45de-87cc-1481b9bd3fd9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -27,16 +30,7 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WindowView.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RenderPipeline.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="filetool.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RenderPass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Game.h">
@@ -57,14 +51,26 @@
     <ClInclude Include="PresentationEntity.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Device.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SwapChain.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="AmbEnums.h">
       <Filter>Header Files\Enums</Filter>
+    </ClInclude>
+    <ClInclude Include="Device.h">
+      <Filter>Header Files\VulkanObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderPass.h">
+      <Filter>Header Files\VulkanObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderPipeline.h">
+      <Filter>Header Files\VulkanObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="SwapChain.h">
+      <Filter>Header Files\VulkanObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="WindowView.h">
+      <Filter>Header Files\VulkanObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="VulkanStructs.h">
+      <Filter>Header Files\VulkanObjects</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -74,16 +80,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WindowView.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RenderPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="filetool.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RenderPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Game.cpp">
@@ -105,10 +102,19 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Device.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\VulkanObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderPass.cpp">
+      <Filter>Source Files\VulkanObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderPipeline.cpp">
+      <Filter>Source Files\VulkanObjects</Filter>
     </ClCompile>
     <ClCompile Include="SwapChain.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\VulkanObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowView.cpp">
+      <Filter>Source Files\VulkanObjects</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
