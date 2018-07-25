@@ -15,7 +15,7 @@ int Game::run() {
 	try {
 		windowView.create();
 		renderPipeline.create(&windowView);
-		time.init(1.5, false);
+		time.init(50.0, true);
 
 		while (!glfwWindowShouldClose(windowView.window)) {
 			time.startOfFrame();
