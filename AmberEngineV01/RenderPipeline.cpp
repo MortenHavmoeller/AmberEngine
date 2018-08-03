@@ -354,7 +354,7 @@ void RenderPipeline::createFramebuffers() {
 }
 
 void RenderPipeline::createCommandPool() {
-	QueueFamilyIndices queueFamilyIndices = pDevice->findQueueFamilies(pDevice->physicalDevice);
+	QueueFamilyIndices queueFamilyIndices = pDevice->findQueueFamilies();
 
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
