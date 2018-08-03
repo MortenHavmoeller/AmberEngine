@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "RenderPass.h"
 
-void RenderPass::create(WindowView* view, Device* device) {
+void RenderPass::create(WindowView* view, RenderDevice* device) {
 	pWindowView = view;
 	pDevice = device;
 

@@ -6,7 +6,7 @@
 
 int Game::run() {
 	WindowView windowView;
-	Device device;
+	RenderDevice renderDevice;
 	RenderPipeline renderPipeline;
 
 	World world;
@@ -16,8 +16,8 @@ int Game::run() {
 
 	try {
 		windowView.create();
-		device.create(&windowView);
-		renderPipeline.create(&windowView, &device);
+		renderDevice.create(&windowView);
+		renderPipeline.create(&windowView, &renderDevice);
 
 		time.init(50.0, true);
 
@@ -25,7 +25,7 @@ int Game::run() {
 			time.startOfFrame();
 
 			glfwPollEvents(); // check window events
-			world.update(); // game state update
+			world.update(); // game state update; currently empty
 			renderPipeline.drawFrame(); // render to screen
 
 			time.frameOperationsDone();
@@ -35,10 +35,10 @@ int Game::run() {
 			);
 		}
 
-		vkDeviceWaitIdle(device.vkDevice); // wait for Vulkan to finish its last work
+		vkDeviceWaitIdle(renderDevice.vkDevice); // wait for Vulkan to finish its last work
 
 		renderPipeline.cleanup();
-		device.cleanup();
+		renderDevice.cleanup();
 		windowView.cleanup();
 	}
 	catch (const std::runtime_error& e) {

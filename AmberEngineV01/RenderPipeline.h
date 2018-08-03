@@ -1,9 +1,8 @@
 #pragma once
 #include "WindowView.h"
+#include "RenderDevice.h"
 #include "RenderPass.h"
 #include "filetool.h"
-#include "WindowView.h"
-#include "Device.h"
 
 #include <string>
 #include <fstream>
@@ -19,7 +18,7 @@ public:
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffers;
 
-	void create(WindowView* view, Device* device);
+	void create(WindowView* view, RenderDevice* device);
 	void cleanup();
 
 	void recreate();
@@ -28,11 +27,14 @@ public:
 
 private:
 	WindowView* pWindowView;
-	Device* pDevice;
+	RenderDevice* pDevice;
 
 	RenderPass renderPass;
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
+
+	VkBuffer vertexBuffer;
+	VkDeviceMemory vertexBufferMemory;
 
 	void createGraphicsPipeline();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
@@ -47,6 +49,7 @@ private:
 	std::vector<VkFence> inFlightFences; // fences to block CPU command submissiong from outrunning GPU rendering
 
 	void createCommandPool();
+	void createVertexBuffer();
 	void createCommandBuffers();
 	void createSyncObjects();
 };

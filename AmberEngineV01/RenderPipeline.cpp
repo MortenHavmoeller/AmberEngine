@@ -1,7 +1,13 @@
 #include "stdafx.h"
 #include "RenderPipeline.h"
 
-void RenderPipeline::create(WindowView* view, Device* device) {
+const std::vector<Vertex> vertices = {
+	{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+	{{0.5f, 0.5f },{ 0.0f, 1.0f, 0.0f}},
+	{{-0.5f, 0.5f },{ 1.0f, 0.0f, 1.0f}}
+};
+
+void RenderPipeline::create(WindowView* view, RenderDevice* device) {
 	pWindowView = view;
 	pDevice = device;
 
@@ -10,11 +16,15 @@ void RenderPipeline::create(WindowView* view, Device* device) {
 	createGraphicsPipeline();
 	createFramebuffers();
 	createCommandPool();
+	createVertexBuffer();
 	createCommandBuffers();
 	createSyncObjects();
 };
 
 void RenderPipeline::cleanup() {
+	vkDestroyBuffer(pDevice->vkDevice, vertexBuffer, nullptr);
+	vkFreeMemory(pDevice->vkDevice, vertexBufferMemory, nullptr);
+
 	vkDestroyCommandPool(pDevice->vkDevice, commandPool, nullptr);
 
 	for (auto framebuffer : swapChainFramebuffers) {
@@ -30,12 +40,12 @@ void RenderPipeline::cleanup() {
 		vkDestroySemaphore(pDevice->vkDevice, imageAvailableSemaphores[i], nullptr);
 		vkDestroyFence(pDevice->vkDevice, inFlightFences[i], nullptr);
 	}
-	
+
 };
 
 void RenderPipeline::recreate() {
 	vkDeviceWaitIdle(pDevice->vkDevice); // wait for previous operations to finish
-	
+
 	// CLEANUP
 	for (auto framebuffer : swapChainFramebuffers) {
 		vkDestroyFramebuffer(pDevice->vkDevice, framebuffer, nullptr);
@@ -50,13 +60,13 @@ void RenderPipeline::recreate() {
 	renderPass.cleanup();
 
 	// RECREATE
+
 	pDevice->recreateSwapChain();
 	// effect:
 	// cleanup(); - though leaving the device itself
 	// createSwapChain();
 	// createImageViews();
 
-	
 	renderPass.create(pWindowView, pDevice);
 	// effect:
 	// createRenderPass();
@@ -75,7 +85,6 @@ void RenderPipeline::drawFrame() {
 
 	// get an image from the swap chain
 	uint32_t imageIndex;
-
 	VkResult result = vkAcquireNextImageKHR(pDevice->vkDevice, pDevice->swapChain, uint64max, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
@@ -157,12 +166,17 @@ void RenderPipeline::createGraphicsPipeline() {
 
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
+	auto bindingDescription = Vertex::getBindingDescription();
+	auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 0;
-	vertexInputInfo.pVertexBindingDescriptions = nullptr; // optional; an array of structs that detail input data
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
-	vertexInputInfo.pVertexAttributeDescriptions = nullptr; // optional; an array of structs that detail input data
+
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -352,6 +366,51 @@ void RenderPipeline::createCommandPool() {
 	}
 }
 
+void RenderPipeline::createVertexBuffer() {
+
+	// data for the creation of the vertex buffer
+	// size depends on the vertices vector size multiplied bt the size of the Vertex data type
+	VkBufferCreateInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // only used from the graphics queue
+
+	if (vkCreateBuffer(pDevice->vkDevice, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create a vertex buffer!");
+	}
+
+	// get memory requirements for the just-created vertex buffer
+	VkMemoryRequirements memReqs;
+	vkGetBufferMemoryRequirements(pDevice->vkDevice, vertexBuffer, &memReqs);
+
+	// use obtained memory requirements to find the right type of memory
+	VkMemoryAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memReqs.size;
+	allocInfo.memoryTypeIndex = pDevice->findPhysicalMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	if (vkAllocateMemory(pDevice->vkDevice, &allocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create vertex buffer memory!");
+	}
+
+	// last parameter is offset within the allocated region of memory
+	// this buffer is specifically for this single object, so offset is simply 0
+	// if the offset is non-zero, it must be divisible by memReqs.alignment
+	vkBindBufferMemory(pDevice->vkDevice, vertexBuffer, vertexBufferMemory, 0);
+
+	// offset still hard-coded to 0; bufferInfo.size is the amount of data read from the buffer when drawing
+	// it is possible to supply a special handle VK_WHOLE_SIZE to map all of the memory
+	// flags also hard-coded to 0; none available in current API
+	void* data; // raw memory pointer (undefined type)
+	vkMapMemory(pDevice->vkDevice, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+
+	// copy the vertex data into the mapped memory
+	memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+
+	vkUnmapMemory(pDevice->vkDevice, vertexBufferMemory);
+}
+
 void RenderPipeline::createCommandBuffers() {
 	commandBuffers.resize(swapChainFramebuffers.size());
 
@@ -400,8 +459,15 @@ void RenderPipeline::createCommandBuffers() {
 
 		vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
+		VkBuffer vertexBuffers[] = { vertexBuffer };
+		VkDeviceSize offsets[] = { 0 };
+
+		// bind to the bindings specified in the Vertex struct
+		// current command buffer, offset, number of bindings, array of vBuffers, array of mem offsets
+		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
 		// (command buffers, vertex count, instance count (for instanced rendering), first vertex count, first instance count
-		vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+		vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffers[i]);
 

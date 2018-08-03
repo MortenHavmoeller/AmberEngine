@@ -1,6 +1,6 @@
 #pragma once
 #include "WindowView.h"
-#include "Device.h"
+#include "RenderDevice.h"
 
 class RenderPass
 {
@@ -9,10 +9,10 @@ public:
 
 	VkRenderPass vkRenderPass;
 
-	void create(WindowView* view, Device* device);
+	void create(WindowView* view, RenderDevice* device);
 	void cleanup();
 private:
 	WindowView* pWindowView;
-	Device* pDevice;
+	RenderDevice* pDevice;
 };
 
