@@ -88,7 +88,8 @@ int RenderDevice::rateDeviceSuitability(VkPhysicalDevice device) {
 	}
 
 	// has required queue families?
-	QueueFamilyIndices indices = findQueueFamilies(device);
+	//QueueFamilyIndices indices = findQueueFamilies(device, VK_QUEUE_GRAPHICS_BIT, 0);
+	QueueFamilyIndices indices = findQueueFamilies_TransferExcludingGraphicsBit(device);
 	if (!indices.isComplete()) {
 		return 0;
 	}
@@ -135,11 +136,11 @@ bool RenderDevice::checkDeviceExtensionsSupport(VkPhysicalDevice device) {
 	return requiredExtensions.empty();
 }
 
-QueueFamilyIndices RenderDevice::findQueueFamilies() {
-	return findQueueFamilies(physicalDevice);
+QueueFamilyIndices RenderDevice::findQueueFamilies(uint32_t queueFlags, uint32_t excludeQueueFlags) {
+	return findQueueFamilies(physicalDevice, queueFlags, excludeQueueFlags);
 }
 
-QueueFamilyIndices RenderDevice::findQueueFamilies(VkPhysicalDevice device) {
+QueueFamilyIndices RenderDevice::findQueueFamilies(VkPhysicalDevice device, uint32_t queueFlags, uint32_t excludeQueueFlags) {
 	QueueFamilyIndices indices;
 
 	uint32_t queueFamilyCount = 0;
@@ -152,11 +153,11 @@ QueueFamilyIndices RenderDevice::findQueueFamilies(VkPhysicalDevice device) {
 	int i = 0;
 
 	for (const auto& queueFamily : queueFamilies) {
-		/*if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+		if (queueFamily.queueCount > 0 && (queueFamily.queueFlags & excludeQueueFlags) != 0) {
 			continue;
-		}*/
+		}
 
-		if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+		if (queueFamily.queueCount > 0 && (queueFamily.queueFlags & queueFlags) == queueFlags) {
 			indices.graphicsFamily = i;
 		}
 
@@ -177,6 +178,14 @@ QueueFamilyIndices RenderDevice::findQueueFamilies(VkPhysicalDevice device) {
 	return indices;
 }
 
+QueueFamilyIndices RenderDevice::findQueueFamilies_TransferExcludingGraphicsBit() {
+	return findQueueFamilies(physicalDevice, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT);
+}
+
+QueueFamilyIndices RenderDevice::findQueueFamilies_TransferExcludingGraphicsBit(VkPhysicalDevice device) {
+	return findQueueFamilies(device, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT);
+}
+
 uint32_t RenderDevice::findPhysicalMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
 	VkPhysicalDeviceMemoryProperties physicalMemoryProperties;
@@ -195,7 +204,8 @@ uint32_t RenderDevice::findPhysicalMemoryType(uint32_t typeFilter, VkMemoryPrope
 void RenderDevice::createLogicalDevice() {
 	// TODO: ensure that the queue families have the same index, for devices which support it
 
-	QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+	//QueueFamilyIndices indices = findQueueFamilies(physicalDevice, VK_QUEUE_GRAPHICS_BIT, 0);
+	QueueFamilyIndices indices = findQueueFamilies_TransferExcludingGraphicsBit(physicalDevice);
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	std::set<int> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentationFamily };
@@ -345,7 +355,9 @@ void RenderDevice::createSwapChain() {
 	// VK_IMAGE_USAGE_TRANSFER_DST_BIT, and then a memory operation is needed to
 	// transfer that image into the swap chain.
 
-	QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+	//QueueFamilyIndices indices = findQueueFamilies(physicalDevice, VK_QUEUE_GRAPHICS_BIT, 0);
+	QueueFamilyIndices indices = findQueueFamilies_TransferExcludingGraphicsBit(physicalDevice);
+
 	uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily,
 		(uint32_t)indices.presentationFamily };
 
