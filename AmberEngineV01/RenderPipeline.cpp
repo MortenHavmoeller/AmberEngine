@@ -369,7 +369,7 @@ void RenderPipeline::createCommandPool() {
 void RenderPipeline::createVertexBuffer() {
 
 	// data for the creation of the vertex buffer
-	// size depends on the vertices vector size multiplied bt the size of the Vertex data type
+	// size depends on the vertices vector size multiplied by the size of the Vertex data type
 	VkBufferCreateInfo bufferInfo = {};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	bufferInfo.size = sizeof(vertices[0]) * vertices.size();

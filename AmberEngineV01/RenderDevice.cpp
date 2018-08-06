@@ -136,11 +136,11 @@ bool RenderDevice::checkDeviceExtensionsSupport(VkPhysicalDevice device) {
 	return requiredExtensions.empty();
 }
 
-QueueFamilyIndices RenderDevice::findQueueFamilies(uint32_t queueFlags, uint32_t excludeQueueFlags) {
+QueueFamilyIndices RenderDevice::findQueueFamilies(VkQueueFlags queueFlags, VkQueueFlags excludeQueueFlags) {
 	return findQueueFamilies(physicalDevice, queueFlags, excludeQueueFlags);
 }
 
-QueueFamilyIndices RenderDevice::findQueueFamilies(VkPhysicalDevice device, uint32_t queueFlags, uint32_t excludeQueueFlags) {
+QueueFamilyIndices RenderDevice::findQueueFamilies(VkPhysicalDevice device, VkQueueFlags queueFlags, VkQueueFlags excludeQueueFlags) {
 	QueueFamilyIndices indices;
 
 	uint32_t queueFamilyCount = 0;

@@ -33,7 +33,7 @@ public:
 
 	void recreateSwapChain();
 
-	QueueFamilyIndices findQueueFamilies(uint32_t queueFlags, uint32_t excludeQueueFlags);
+	QueueFamilyIndices findQueueFamilies(VkQueueFlags queueFlags, VkQueueFlags excludeQueueFlags);
 	QueueFamilyIndices findQueueFamilies_TransferExcludingGraphicsBit();
 
 	uint32_t findPhysicalMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
@@ -45,7 +45,7 @@ private:
 
 	int rateDeviceSuitability(VkPhysicalDevice device);
 	bool checkDeviceExtensionsSupport(VkPhysicalDevice device);
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, uint32_t queueFlags, uint32_t excludeQueueFlags);
+	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkQueueFlags queueFlags, VkQueueFlags excludeQueueFlags);
 
 	QueueFamilyIndices findQueueFamilies_TransferExcludingGraphicsBit(VkPhysicalDevice device);
 
