@@ -15,7 +15,10 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 class RenderPipeline
 {
 public:
+	
+	VkCommandPool transferCommandPool;
 	VkCommandPool commandPool;
+	std::vector<VkCommandBuffer> transferCommandBuffers;
 	std::vector<VkCommandBuffer> commandBuffers;
 
 	void create(WindowView* view, RenderDevice* device);
@@ -36,6 +39,8 @@ private:
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
 
+	bool hasTransferCommandPool;
+
 	void createGraphicsPipeline();
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	
@@ -48,7 +53,7 @@ private:
 	std::vector<VkSemaphore> renderFinishedSemaphores; // image ready for presentation to surface
 	std::vector<VkFence> inFlightFences; // fences to block CPU command submissiong from outrunning GPU rendering
 
-	void createCommandPool();
+	void createCommandPools();
 	void createVertexBuffer();
 	void createCommandBuffers();
 	void createSyncObjects();

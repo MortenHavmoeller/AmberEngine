@@ -17,6 +17,7 @@ public:
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkDevice vkDevice;
 
+	VkQueue transferQueue;
 	VkQueue graphicsQueue;
 	VkQueue presentationQueue;
 
@@ -33,8 +34,7 @@ public:
 
 	void recreateSwapChain();
 
-	QueueFamilyIndices findQueueFamilies(VkQueueFlags queueFlags, VkQueueFlags excludeQueueFlags);
-	QueueFamilyIndices findQueueFamilies_TransferExcludingGraphicsBit();
+	QueueFamilyIndices findPhysicalDeviceQueueFamilies();
 
 	uint32_t findPhysicalMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 private:
@@ -45,9 +45,10 @@ private:
 
 	int rateDeviceSuitability(VkPhysicalDevice device);
 	bool checkDeviceExtensionsSupport(VkPhysicalDevice device);
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkQueueFlags queueFlags, VkQueueFlags excludeQueueFlags);
+	
+	void DisplayPhysicalDeviceFamilies(VkPhysicalDevice device);
 
-	QueueFamilyIndices findQueueFamilies_TransferExcludingGraphicsBit(VkPhysicalDevice device);
+	QueueFamilyIndices findPhysicalDeviceQueueFamilies(VkPhysicalDevice device);
 
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);

@@ -89,7 +89,7 @@ int RenderDevice::rateDeviceSuitability(VkPhysicalDevice device) {
 
 	// has required queue families?
 	//QueueFamilyIndices indices = findQueueFamilies(device, VK_QUEUE_GRAPHICS_BIT, 0);
-	QueueFamilyIndices indices = findQueueFamilies_TransferExcludingGraphicsBit(device);
+	QueueFamilyIndices indices = findPhysicalDeviceQueueFamilies(device);
 	if (!indices.isComplete()) {
 		return 0;
 	}
@@ -136,28 +136,59 @@ bool RenderDevice::checkDeviceExtensionsSupport(VkPhysicalDevice device) {
 	return requiredExtensions.empty();
 }
 
-QueueFamilyIndices RenderDevice::findQueueFamilies(VkQueueFlags queueFlags, VkQueueFlags excludeQueueFlags) {
-	return findQueueFamilies(physicalDevice, queueFlags, excludeQueueFlags);
+QueueFamilyIndices RenderDevice::findPhysicalDeviceQueueFamilies() {
+	return findPhysicalDeviceQueueFamilies(physicalDevice);
 }
 
-QueueFamilyIndices RenderDevice::findQueueFamilies(VkPhysicalDevice device, VkQueueFlags queueFlags, VkQueueFlags excludeQueueFlags) {
-	QueueFamilyIndices indices;
-
+void RenderDevice::DisplayPhysicalDeviceFamilies(VkPhysicalDevice device) {
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
-	// EXCEPTION THROWN
 	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
 	int i = 0;
 
 	for (const auto& queueFamily : queueFamilies) {
-		if (queueFamily.queueCount > 0 && (queueFamily.queueFlags & excludeQueueFlags) != 0) {
-			continue;
+		std::cout << "Queue family " << i << " flags:" << std::endl;
+
+		if ((queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT) {
+			std::cout << "\t" << "Graphics bit" << std::endl;
 		}
 
-		if (queueFamily.queueCount > 0 && (queueFamily.queueFlags & queueFlags) == queueFlags) {
+		if ((queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) == VK_QUEUE_TRANSFER_BIT) {
+			std::cout << "\t" << "Transfer bit" << std::endl;
+		}
+
+		if ((queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT) {
+			std::cout << "\t" << "Compute bit" << std::endl;
+		}
+
+		i++;
+	}
+}
+
+// Returns the indices of the first queue family that matches the set flags
+QueueFamilyIndices RenderDevice::findPhysicalDeviceQueueFamilies(VkPhysicalDevice device) {
+	QueueFamilyIndices indices;
+
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+	int i = 0;
+
+	for (const auto& queueFamily : queueFamilies) {
+		if (queueFamily.queueCount > 0 
+			&& queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT 
+			&& !(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)) {
+			indices.transferOnlyFamily = i;
+		}
+
+		if (queueFamily.queueCount > 0 
+			&& queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 			indices.graphicsFamily = i;
 		}
 
@@ -178,14 +209,6 @@ QueueFamilyIndices RenderDevice::findQueueFamilies(VkPhysicalDevice device, VkQu
 	return indices;
 }
 
-QueueFamilyIndices RenderDevice::findQueueFamilies_TransferExcludingGraphicsBit() {
-	return findQueueFamilies(physicalDevice, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT);
-}
-
-QueueFamilyIndices RenderDevice::findQueueFamilies_TransferExcludingGraphicsBit(VkPhysicalDevice device) {
-	return findQueueFamilies(device, VK_QUEUE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT);
-}
-
 uint32_t RenderDevice::findPhysicalMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
 	VkPhysicalDeviceMemoryProperties physicalMemoryProperties;
@@ -204,13 +227,25 @@ uint32_t RenderDevice::findPhysicalMemoryType(uint32_t typeFilter, VkMemoryPrope
 void RenderDevice::createLogicalDevice() {
 	// TODO: ensure that the queue families have the same index, for devices which support it
 
-	//QueueFamilyIndices indices = findQueueFamilies(physicalDevice, VK_QUEUE_GRAPHICS_BIT, 0);
-	QueueFamilyIndices indices = findQueueFamilies_TransferExcludingGraphicsBit(physicalDevice);
+	DisplayPhysicalDeviceFamilies(physicalDevice);
+
+	QueueFamilyIndices indices = findPhysicalDeviceQueueFamilies(physicalDevice);
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	std::set<int> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentationFamily };
+	std::set<int> uniqueQueueFamilies;
+	
+	// TODO
+	//if (indices.hasTransferOnly()) {
+	//	uniqueQueueFamilies = { indices.transferOnlyFamily, indices.graphicsFamily, indices.presentationFamily };
+	//}
+	//else {
+	//	uniqueQueueFamilies = { indices.graphicsFamily, indices.presentationFamily };
+	//}
+	uniqueQueueFamilies = { indices.graphicsFamily, indices.presentationFamily };
+
 	float queuePriority = 1.0f;
 
+	// gather all of the queue create infos in uniqueQueueFamilies
 	for (int index : uniqueQueueFamilies) {
 		VkDeviceQueueCreateInfo queueCreateInfo = {};
 		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -243,6 +278,18 @@ void RenderDevice::createLogicalDevice() {
 	if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &vkDevice) != VK_SUCCESS) {
 		throw std::runtime_error("failed creating logical device!");
 	}
+
+
+	// TODO
+	//if (indices.hasTransferOnly()) {
+	//	vkGetDeviceQueue(vkDevice, indices.transferOnlyFamily, 0, &transferQueue);
+	//	vkGetDeviceQueue(vkDevice, indices.graphicsFamily, 0, &graphicsQueue);
+	//	vkGetDeviceQueue(vkDevice, indices.presentationFamily, 0, &presentationQueue);
+	//}
+	//else {
+	//	vkGetDeviceQueue(vkDevice, indices.graphicsFamily, 0, &graphicsQueue);
+	//	vkGetDeviceQueue(vkDevice, indices.presentationFamily, 0, &presentationQueue);
+	//}
 
 	vkGetDeviceQueue(vkDevice, indices.graphicsFamily, 0, &graphicsQueue);
 	vkGetDeviceQueue(vkDevice, indices.presentationFamily, 0, &presentationQueue);
@@ -356,17 +403,19 @@ void RenderDevice::createSwapChain() {
 	// transfer that image into the swap chain.
 
 	//QueueFamilyIndices indices = findQueueFamilies(physicalDevice, VK_QUEUE_GRAPHICS_BIT, 0);
-	QueueFamilyIndices indices = findQueueFamilies_TransferExcludingGraphicsBit(physicalDevice);
+	QueueFamilyIndices indices = findPhysicalDeviceQueueFamilies(physicalDevice);
 
 	uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily,
 		(uint32_t)indices.presentationFamily };
 
 	if (indices.graphicsFamily != indices.presentationFamily) {
+		std::cout << "RenderDevice::createSwapChain(): Concurrent sharing..." << std::endl;
 		swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		swapChainCreateInfo.queueFamilyIndexCount = 2;
 		swapChainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
 	}
 	else {
+		std::cout << "RenderDevice::createSwapChain(): Exclusive sharing..." << std::endl;
 		swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		swapChainCreateInfo.queueFamilyIndexCount = 0; // optional
 		swapChainCreateInfo.pQueueFamilyIndices = nullptr; // optional

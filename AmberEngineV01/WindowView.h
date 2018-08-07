@@ -1,4 +1,5 @@
 #pragma once
+#include "QueueFamilyIndices.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -27,15 +28,6 @@ const bool enableValidationLayers = true;
 #else
 const bool enableValidationLayers = false;
 #endif
-
-struct QueueFamilyIndices {
-	int graphicsFamily = -1;
-	int presentationFamily = -1;
-
-	bool isComplete() {
-		return graphicsFamily >= 0 && presentationFamily >= 0;
-	}
-};
 
 class WindowView
 {

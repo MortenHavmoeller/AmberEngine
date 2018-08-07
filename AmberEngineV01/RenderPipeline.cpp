@@ -15,7 +15,7 @@ void RenderPipeline::create(WindowView* view, RenderDevice* device) {
 
 	createGraphicsPipeline();
 	createFramebuffers();
-	createCommandPool();
+	createCommandPools();
 	createVertexBuffer();
 	createCommandBuffers();
 	createSyncObjects();
@@ -25,6 +25,7 @@ void RenderPipeline::cleanup() {
 	vkDestroyBuffer(pDevice->vkDevice, vertexBuffer, nullptr);
 	vkFreeMemory(pDevice->vkDevice, vertexBufferMemory, nullptr);
 
+	vkDestroyCommandPool(pDevice->vkDevice, transferCommandPool, nullptr);
 	vkDestroyCommandPool(pDevice->vkDevice, commandPool, nullptr);
 
 	for (auto framebuffer : swapChainFramebuffers) {
@@ -52,6 +53,7 @@ void RenderPipeline::recreate() {
 	}
 
 	// allows re-use of the existing command pool
+	vkFreeCommandBuffers(pDevice->vkDevice, transferCommandPool, static_cast<uint32_t>(transferCommandBuffers.size()), transferCommandBuffers.data());
 	vkFreeCommandBuffers(pDevice->vkDevice, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 
 	vkDestroyPipeline(pDevice->vkDevice, graphicsPipeline, nullptr);
@@ -353,8 +355,33 @@ void RenderPipeline::createFramebuffers() {
 	}
 }
 
-void RenderPipeline::createCommandPool() {
-	QueueFamilyIndices queueFamilyIndices = pDevice->findQueueFamilies_TransferExcludingGraphicsBit();
+void RenderPipeline::createCommandPools() {
+	QueueFamilyIndices queueFamilyIndices = pDevice->findPhysicalDeviceQueueFamilies();
+
+
+	// TODO
+	// create a transfer command pool if possible
+	//if (queueFamilyIndices.hasTransferOnly()) {
+	//	hasTransferCommandPool = true;
+	//	VkCommandPoolCreateInfo transferPoolInfo = {};
+	//	transferPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	//	transferPoolInfo.queueFamilyIndex = queueFamilyIndices.transferOnlyFamily;
+	//	transferPoolInfo.flags = 0; // optional
+
+	//	if (vkCreateCommandPool(pDevice->vkDevice, &transferPoolInfo, nullptr, &transferCommandPool) != VK_SUCCESS) {
+	//		throw std::runtime_error("failed to create transfer command pool!");
+	//	}
+	//}
+
+
+
+
+
+	hasTransferCommandPool = false;
+
+
+
+
 
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -368,13 +395,36 @@ void RenderPipeline::createCommandPool() {
 
 void RenderPipeline::createVertexBuffer() {
 
+	QueueFamilyIndices queueIndices = pDevice->findPhysicalDeviceQueueFamilies();
+	std::vector<uint32_t> queueFamilyIndicesArray;
+	
+	// TODO
+	//if (queueIndices.hasTransferOnly()) {
+	//	queueFamilyIndicesArray = { (uint32_t)queueIndices.transferOnlyFamily, (uint32_t)queueIndices.graphicsFamily };
+	//}
+	//else {
+	//	queueFamilyIndicesArray = { (uint32_t)queueIndices.graphicsFamily };
+	//	throw std::runtime_error("no fallback if device has no transfer-only queue family!");
+	//}
+
+	queueFamilyIndicesArray = { (uint32_t)queueIndices.graphicsFamily };
+
 	// data for the creation of the vertex buffer
 	// size depends on the vertices vector size multiplied by the size of the Vertex data type
 	VkBufferCreateInfo bufferInfo = {};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	bufferInfo.size = sizeof(vertices[0]) * vertices.size();
 	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // only used from the graphics queue
+
+	if (queueIndices.hasTransferOnly()) {
+		bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT; // used from both graphics queue and transfer
+	}
+	else {
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // only used from the graphics queue
+	}
+
+	bufferInfo.queueFamilyIndexCount = 2;
+	bufferInfo.pQueueFamilyIndices = queueFamilyIndicesArray.data();
 
 	if (vkCreateBuffer(pDevice->vkDevice, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create a vertex buffer!");
@@ -412,20 +462,31 @@ void RenderPipeline::createVertexBuffer() {
 }
 
 void RenderPipeline::createCommandBuffers() {
-	commandBuffers.resize(swapChainFramebuffers.size());
+	
 
 #ifdef _DEBUG
 	std::cout << "swap chain frame buffers size: " << swapChainFramebuffers.size() << std::endl;
 #endif
+	if (hasTransferCommandPool) {
+		transferCommandBuffers.resize(swapChainFramebuffers.size());
+
+		VkCommandBufferAllocateInfo transferCmdBufferAllocateInfo = {};
+		transferCmdBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		transferCmdBufferAllocateInfo.commandPool = transferCommandPool;
+		transferCmdBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		transferCmdBufferAllocateInfo.commandBufferCount = (uint32_t)transferCommandBuffers.size();
+
+		if (vkAllocateCommandBuffers(pDevice->vkDevice, &transferCmdBufferAllocateInfo, transferCommandBuffers.data()) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate transfer command buffers!");
+		}
+	}
+
+	commandBuffers.resize(swapChainFramebuffers.size());
 
 	VkCommandBufferAllocateInfo cmdBufferAllocateInfo = {};
 	cmdBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	cmdBufferAllocateInfo.commandPool = commandPool;
-
-	// the other option is secondary, which cannot be submitted to the render pipeline directly.
-	// secondary command buffers can however be called by primary buffers
 	cmdBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
 	cmdBufferAllocateInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
 	if (vkAllocateCommandBuffers(pDevice->vkDevice, &cmdBufferAllocateInfo, commandBuffers.data()) != VK_SUCCESS) {

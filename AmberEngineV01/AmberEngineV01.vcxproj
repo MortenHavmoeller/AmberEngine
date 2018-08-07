@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClInclude Include="AmbEnums.h" />
     <ClInclude Include="Component.h" />
+    <ClInclude Include="QueueFamilyIndices.h" />
     <ClInclude Include="RenderDevice.h" />
     <ClInclude Include="Entity.h" />
     <ClInclude Include="filetool.h" />
