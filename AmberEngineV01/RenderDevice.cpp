@@ -1,6 +1,10 @@
 #include "stdafx.h"
 #include "RenderDevice.h"
 
+// cannot go into header file...
+#define VMA_IMPLEMENTATION // ONLY USE ONCE
+#include "vk_mem_alloc.h"
+
 RenderDevice::RenderDevice(){
 }
 
@@ -234,14 +238,12 @@ void RenderDevice::createLogicalDevice() {
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	std::set<int> uniqueQueueFamilies;
 	
-	// TODO
-	//if (indices.hasTransferOnly()) {
-	//	uniqueQueueFamilies = { indices.transferOnlyFamily, indices.graphicsFamily, indices.presentationFamily };
-	//}
-	//else {
-	//	uniqueQueueFamilies = { indices.graphicsFamily, indices.presentationFamily };
-	//}
-	uniqueQueueFamilies = { indices.graphicsFamily, indices.presentationFamily };
+	if (indices.hasTransferOnly()) {
+		uniqueQueueFamilies = { indices.transferOnlyFamily, indices.graphicsFamily, indices.presentationFamily };
+	}
+	else {
+		uniqueQueueFamilies = { indices.graphicsFamily, indices.presentationFamily };
+	}
 
 	float queuePriority = 1.0f;
 
@@ -280,19 +282,15 @@ void RenderDevice::createLogicalDevice() {
 	}
 
 
-	// TODO
-	//if (indices.hasTransferOnly()) {
-	//	vkGetDeviceQueue(vkDevice, indices.transferOnlyFamily, 0, &transferQueue);
-	//	vkGetDeviceQueue(vkDevice, indices.graphicsFamily, 0, &graphicsQueue);
-	//	vkGetDeviceQueue(vkDevice, indices.presentationFamily, 0, &presentationQueue);
-	//}
-	//else {
-	//	vkGetDeviceQueue(vkDevice, indices.graphicsFamily, 0, &graphicsQueue);
-	//	vkGetDeviceQueue(vkDevice, indices.presentationFamily, 0, &presentationQueue);
-	//}
-
-	vkGetDeviceQueue(vkDevice, indices.graphicsFamily, 0, &graphicsQueue);
-	vkGetDeviceQueue(vkDevice, indices.presentationFamily, 0, &presentationQueue);
+	if (indices.hasTransferOnly()) {
+		vkGetDeviceQueue(vkDevice, indices.transferOnlyFamily, 0, &transferQueue);
+		vkGetDeviceQueue(vkDevice, indices.graphicsFamily, 0, &graphicsQueue);
+		vkGetDeviceQueue(vkDevice, indices.presentationFamily, 0, &presentationQueue);
+	}
+	else {
+		vkGetDeviceQueue(vkDevice, indices.graphicsFamily, 0, &graphicsQueue);
+		vkGetDeviceQueue(vkDevice, indices.presentationFamily, 0, &presentationQueue);
+	}
 }
 
 VkSurfaceFormatKHR RenderDevice::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
@@ -402,11 +400,13 @@ void RenderDevice::createSwapChain() {
 	// VK_IMAGE_USAGE_TRANSFER_DST_BIT, and then a memory operation is needed to
 	// transfer that image into the swap chain.
 
-	//QueueFamilyIndices indices = findQueueFamilies(physicalDevice, VK_QUEUE_GRAPHICS_BIT, 0);
 	QueueFamilyIndices indices = findPhysicalDeviceQueueFamilies(physicalDevice);
 
 	uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily,
 		(uint32_t)indices.presentationFamily };
+
+
+
 
 	if (indices.graphicsFamily != indices.presentationFamily) {
 		std::cout << "RenderDevice::createSwapChain(): Concurrent sharing..." << std::endl;
@@ -420,6 +420,9 @@ void RenderDevice::createSwapChain() {
 		swapChainCreateInfo.queueFamilyIndexCount = 0; // optional
 		swapChainCreateInfo.pQueueFamilyIndices = nullptr; // optional
 	}
+
+
+
 
 	// don't apply any special transformation to the output; simply use the current one.
 	swapChainCreateInfo.preTransform = swapChainSupport.capabilities.currentTransform;

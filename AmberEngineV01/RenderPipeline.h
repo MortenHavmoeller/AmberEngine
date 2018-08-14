@@ -10,6 +10,8 @@
 #include <filesystem>
 #include <cstdlib>
 
+
+
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
 class RenderPipeline
@@ -39,23 +41,24 @@ private:
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
 
+	std::vector<VkFramebuffer> swapChainFramebuffers; // for use with createFramebuffers
+	size_t currentFrame = 0;
+	std::vector<VkSemaphore> imageAvailableSemaphores; // image acquired from swap chain
+	std::vector<VkSemaphore> renderFinishedSemaphores; // image ready for presentation to surface
+	std::vector<VkFence> inFlightFences; // fences to block CPU command submission from outrunning GPU rendering
+
 	bool hasTransferCommandPool;
 
 	void createGraphicsPipeline();
-	VkShaderModule createShaderModule(const std::vector<char>& code);
-	
 	void createFramebuffers();
-	std::vector<VkFramebuffer> swapChainFramebuffers; // for use with createFramebuffers
-
-	size_t currentFrame = 0;
-
-	std::vector<VkSemaphore> imageAvailableSemaphores; // image acquired from swap chain
-	std::vector<VkSemaphore> renderFinishedSemaphores; // image ready for presentation to surface
-	std::vector<VkFence> inFlightFences; // fences to block CPU command submissiong from outrunning GPU rendering
-
 	void createCommandPools();
 	void createVertexBuffer();
 	void createCommandBuffers();
 	void createSyncObjects();
+
+	VkShaderModule createShaderModule(const std::vector<char>& code);
+	
+	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 };
 

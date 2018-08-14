@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "RenderPipeline.h"
 
+
+
 const std::vector<Vertex> vertices = {
 	{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
 	{{0.5f, 0.5f },{ 0.0f, 1.0f, 0.0f}},
@@ -83,12 +85,15 @@ void RenderPipeline::drawFrame() {
 
 	// wait for a fence to become signaled; fences are signaled as drawing operations finish
 	vkWaitForFences(pDevice->vkDevice, 1, &inFlightFences[currentFrame], VK_TRUE, uint64max);
+
+	// un-signal these fences so they can be signaled once this drawing operation has been finished
 	vkResetFences(pDevice->vkDevice, 1, &inFlightFences[currentFrame]);
 
 	// get an image from the swap chain
 	uint32_t imageIndex;
 	VkResult result = vkAcquireNextImageKHR(pDevice->vkDevice, pDevice->swapChain, uint64max, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
+	// if the window size has changed, recreate pipeline
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 		recreate();
 		return;
@@ -359,29 +364,21 @@ void RenderPipeline::createCommandPools() {
 	QueueFamilyIndices queueFamilyIndices = pDevice->findPhysicalDeviceQueueFamilies();
 
 
-	// TODO
 	// create a transfer command pool if possible
-	//if (queueFamilyIndices.hasTransferOnly()) {
-	//	hasTransferCommandPool = true;
-	//	VkCommandPoolCreateInfo transferPoolInfo = {};
-	//	transferPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	//	transferPoolInfo.queueFamilyIndex = queueFamilyIndices.transferOnlyFamily;
-	//	transferPoolInfo.flags = 0; // optional
+	if (queueFamilyIndices.hasTransferOnly()) {
+		hasTransferCommandPool = true;
+		VkCommandPoolCreateInfo transferPoolInfo = {};
+		transferPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		transferPoolInfo.queueFamilyIndex = queueFamilyIndices.transferOnlyFamily;
+		transferPoolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 
-	//	if (vkCreateCommandPool(pDevice->vkDevice, &transferPoolInfo, nullptr, &transferCommandPool) != VK_SUCCESS) {
-	//		throw std::runtime_error("failed to create transfer command pool!");
-	//	}
-	//}
-
-
-
-
-
-	hasTransferCommandPool = false;
-
-
-
-
+		if (vkCreateCommandPool(pDevice->vkDevice, &transferPoolInfo, nullptr, &transferCommandPool) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create transfer command pool!");
+		}
+	}
+	else {
+		hasTransferCommandPool = false;
+	}
 
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -393,72 +390,100 @@ void RenderPipeline::createCommandPools() {
 	}
 }
 
-void RenderPipeline::createVertexBuffer() {
-
-	QueueFamilyIndices queueIndices = pDevice->findPhysicalDeviceQueueFamilies();
-	std::vector<uint32_t> queueFamilyIndicesArray;
-	
-	// TODO
-	//if (queueIndices.hasTransferOnly()) {
-	//	queueFamilyIndicesArray = { (uint32_t)queueIndices.transferOnlyFamily, (uint32_t)queueIndices.graphicsFamily };
-	//}
-	//else {
-	//	queueFamilyIndicesArray = { (uint32_t)queueIndices.graphicsFamily };
-	//	throw std::runtime_error("no fallback if device has no transfer-only queue family!");
-	//}
-
-	queueFamilyIndicesArray = { (uint32_t)queueIndices.graphicsFamily };
+void RenderPipeline::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
 
 	// data for the creation of the vertex buffer
 	// size depends on the vertices vector size multiplied by the size of the Vertex data type
 	VkBufferCreateInfo bufferInfo = {};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	bufferInfo.size = size;
+	bufferInfo.usage = usage;
 
-	if (queueIndices.hasTransferOnly()) {
-		bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT; // used from both graphics queue and transfer
-	}
-	else {
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // only used from the graphics queue
-	}
-
-	bufferInfo.queueFamilyIndexCount = 2;
-	bufferInfo.pQueueFamilyIndices = queueFamilyIndicesArray.data();
-
-	if (vkCreateBuffer(pDevice->vkDevice, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create a vertex buffer!");
+	if (vkCreateBuffer(pDevice->vkDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create a buffer!");
 	}
 
 	// get memory requirements for the just-created vertex buffer
 	VkMemoryRequirements memReqs;
-	vkGetBufferMemoryRequirements(pDevice->vkDevice, vertexBuffer, &memReqs);
+	vkGetBufferMemoryRequirements(pDevice->vkDevice, buffer, &memReqs);
 
 	// use obtained memory requirements to find the right type of memory
 	VkMemoryAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memReqs.size;
-	allocInfo.memoryTypeIndex = pDevice->findPhysicalMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	allocInfo.memoryTypeIndex = pDevice->findPhysicalMemoryType(memReqs.memoryTypeBits, properties);
 
-	if (vkAllocateMemory(pDevice->vkDevice, &allocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create vertex buffer memory!");
+	std::cout << "Allocating memory per-object. This is subject to change." << std::endl;
+
+	if (vkAllocateMemory(pDevice->vkDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create buffer memory!");
 	}
 
 	// last parameter is offset within the allocated region of memory
 	// this buffer is specifically for this single object, so offset is simply 0
-	// if the offset is non-zero, it must be divisible by memReqs.alignment
-	vkBindBufferMemory(pDevice->vkDevice, vertexBuffer, vertexBufferMemory, 0);
+	// if the offset is non-zero, it must be divisible by memReqs.alignment (VkMemoryRequirements)
+	vkBindBufferMemory(pDevice->vkDevice, buffer, bufferMemory, 0);
+}
+
+void RenderPipeline::createVertexBuffer() {
+	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+	
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	createBuffer(bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
 	// offset still hard-coded to 0; bufferInfo.size is the amount of data read from the buffer when drawing
 	// it is possible to supply a special handle VK_WHOLE_SIZE to map all of the memory
 	// flags also hard-coded to 0; none available in current API
 	void* data; // raw memory pointer (undefined type)
-	vkMapMemory(pDevice->vkDevice, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+	vkMapMemory(pDevice->vkDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
 
 	// copy the vertex data into the mapped memory
-	memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+	memcpy(data, vertices.data(), (size_t)bufferSize);
+	vkUnmapMemory(pDevice->vkDevice, stagingBufferMemory);
 
-	vkUnmapMemory(pDevice->vkDevice, vertexBufferMemory);
+	createBuffer(bufferSize, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+
+	copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+
+	vkDestroyBuffer(pDevice->vkDevice, stagingBuffer, nullptr);
+	vkFreeMemory(pDevice->vkDevice, stagingBufferMemory, nullptr);
+}
+
+void RenderPipeline::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = transferCommandPool;
+	allocInfo.commandBufferCount = 1;
+
+	VkCommandBuffer transferBuffer;
+	vkAllocateCommandBuffers(pDevice->vkDevice, &allocInfo, &transferBuffer);
+
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	vkBeginCommandBuffer(transferBuffer, &beginInfo);
+
+	VkBufferCopy copyRegion = {};
+	copyRegion.srcOffset = 0; // optional
+	copyRegion.dstOffset = 0; // optional
+	copyRegion.size = size;
+
+	vkCmdCopyBuffer(transferBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+	vkEndCommandBuffer(transferBuffer);
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &transferBuffer;
+
+	vkQueueSubmit(pDevice->transferQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(pDevice->transferQueue);
+
+	vkFreeCommandBuffers(pDevice->vkDevice, transferCommandPool, 1, &transferBuffer);
 }
 
 void RenderPipeline::createCommandBuffers() {

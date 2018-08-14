@@ -78,6 +78,9 @@
     <ClInclude Include="QueueFamilyIndices.h">
       <Filter>Header Files\VulkanObjects</Filter>
     </ClInclude>
+    <ClInclude Include="vk_mem_alloc.h">
+      <Filter>Header Files\VulkanObjects</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

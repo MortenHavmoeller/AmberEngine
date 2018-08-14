@@ -40,9 +40,11 @@ public:
 private:
 	WindowView* pWindowView;
 
-	void pickPhysicalDevice();
 	void createLogicalDevice();
+	void createSwapChain();
+	void createImageViews();
 
+	void pickPhysicalDevice();
 	int rateDeviceSuitability(VkPhysicalDevice device);
 	bool checkDeviceExtensionsSupport(VkPhysicalDevice device);
 	
@@ -54,7 +56,6 @@ private:
 	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentationModes);
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-	void createSwapChain();
-	void createImageViews();
+
 };
 
