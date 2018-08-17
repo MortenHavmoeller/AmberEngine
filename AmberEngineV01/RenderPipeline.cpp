@@ -4,9 +4,14 @@
 
 
 const std::vector<Vertex> vertices = {
-	{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, 0.5f },{ 0.0f, 1.0f, 0.0f}},
-	{{-0.5f, 0.5f },{ 1.0f, 0.0f, 1.0f}}
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+	{{0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f}},
+	{{0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f}},
+	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+};
+
+const std::vector<uint16_t> vertexIndices = {
+	0, 1, 2, 2, 3, 0
 };
 
 void RenderPipeline::create(WindowView* view, RenderDevice* device) {
@@ -15,15 +20,23 @@ void RenderPipeline::create(WindowView* view, RenderDevice* device) {
 
 	renderPass.create(pWindowView, pDevice);
 
+	createDescriptorSetLayout();
 	createGraphicsPipeline();
 	createFramebuffers();
 	createCommandPools();
 	createVertexBuffer();
-	createCommandBuffers();
+	createIndexBuffer();
+	createUniformBuffers();
+	createDescriptorPool();
+	createDescriptorSets();
+	createCommandBuffers(VK_INDEX_TYPE_UINT16);
 	createSyncObjects();
 };
 
 void RenderPipeline::cleanup() {
+	vkDestroyBuffer(pDevice->vkDevice, indexBuffer, nullptr);
+	vkFreeMemory(pDevice->vkDevice, indexBufferMemory, nullptr);
+
 	vkDestroyBuffer(pDevice->vkDevice, vertexBuffer, nullptr);
 	vkFreeMemory(pDevice->vkDevice, vertexBufferMemory, nullptr);
 
@@ -44,10 +57,18 @@ void RenderPipeline::cleanup() {
 		vkDestroyFence(pDevice->vkDevice, inFlightFences[i], nullptr);
 	}
 
+	vkDestroyDescriptorPool(pDevice->vkDevice, descriptorPool, nullptr);
+
+	vkDestroyDescriptorSetLayout(pDevice->vkDevice, descriptorSetLayout, nullptr);
+	for (size_t i = 0; i < uniformBuffers.size(); i++) {
+		vkDestroyBuffer(pDevice->vkDevice, uniformBuffers[i], nullptr);
+		vkFreeMemory(pDevice->vkDevice, uniformBuffersMemory[i], nullptr);
+	}
 };
 
 void RenderPipeline::recreate() {
-	vkDeviceWaitIdle(pDevice->vkDevice); // wait for previous operations to finish
+	// wait for previous operations to finish
+	vkDeviceWaitIdle(pDevice->vkDevice);
 
 	// CLEANUP
 	for (auto framebuffer : swapChainFramebuffers) {
@@ -65,22 +86,18 @@ void RenderPipeline::recreate() {
 
 	// RECREATE
 
+	// swap chain and image views
 	pDevice->recreateSwapChain();
-	// effect:
-	// cleanup(); - though leaving the device itself
-	// createSwapChain();
-	// createImageViews();
 
+	// render pass
 	renderPass.create(pWindowView, pDevice);
-	// effect:
-	// createRenderPass();
 
 	createGraphicsPipeline();
 	createFramebuffers();
-	createCommandBuffers();
+	createCommandBuffers(VK_INDEX_TYPE_UINT16);
 }
 
-void RenderPipeline::drawFrame() {
+void RenderPipeline::drawFrame(GameContext gameContext) {
 	uint64_t uint64max = (std::numeric_limits<uint64_t>::max)();
 
 	// wait for a fence to become signaled; fences are signaled as drawing operations finish
@@ -101,6 +118,8 @@ void RenderPipeline::drawFrame() {
 	else if (result != VK_SUCCESS) {
 		throw std::runtime_error("failed to acquire swap chain image!");
 	}
+
+	updateUniformBuffer(imageIndex, gameContext);
 
 	// submitting the command buffer
 	VkSubmitInfo submitInfo = {};
@@ -146,6 +165,24 @@ void RenderPipeline::drawFrame() {
 	}
 
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void RenderPipeline::createDescriptorSetLayout() {
+	VkDescriptorSetLayoutBinding layoutBinding = {};
+	layoutBinding.binding = 0;
+	layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	layoutBinding.descriptorCount = 1; // higher counts used for bones in a skeleton
+	layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // only used by vertex shader
+	layoutBinding.pImmutableSamplers = nullptr; // optional
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = 1;
+	layoutInfo.pBindings = &layoutBinding;
+
+	if (vkCreateDescriptorSetLayout(pDevice->vkDevice, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create descriptor set layout!");
+	}
 }
 
 void RenderPipeline::createGraphicsPipeline() {
@@ -216,7 +253,7 @@ void RenderPipeline::createGraphicsPipeline() {
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
 	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; // cull backfaces
-	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE; // define triangles in clockwise fashion
+	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // define triangles in counter-clockwise fashion
 
 	// often used for shadow mapping
 	rasterizer.depthBiasEnable = VK_FALSE;
@@ -277,10 +314,10 @@ void RenderPipeline::createGraphicsPipeline() {
 
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 0; // optional
-	pipelineLayoutInfo.pSetLayouts = nullptr; // optional
+	pipelineLayoutInfo.setLayoutCount = 1; // for descriptor sets
+	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 	pipelineLayoutInfo.pushConstantRangeCount = 0; // optional
-	pipelineLayoutInfo.pPushConstantRanges = nullptr; // 
+	pipelineLayoutInfo.pPushConstantRanges = nullptr; // optional
 
 	if (vkCreatePipelineLayout(pDevice->vkDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create pipeline layout");
@@ -390,7 +427,19 @@ void RenderPipeline::createCommandPools() {
 	}
 }
 
-void RenderPipeline::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+void RenderPipeline::createBuffer_WithOwnMemory(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+
+	/* From text:
+	It should be noted that in a real world application, you’re not supposed to actually call vkAllocateMemory for every individual buffer.
+	The maximum number of simultaneous memory allocations is limited by the maxMemoryAllocationCount physical device limit,
+	which may be as low as 4096 even on high end hardware like an NVIDIA GTX 1080.
+
+	The right way to allocate memory for a large number of objects at the same time is to create a custom allocator
+	that splits up a single allocation among many different objects by using the offset parameters that we’ve seen in many functions.
+
+	You can either implement such an allocator yourself, or use the VulkanMemoryAllocator library provided by the GPUOpen initiative.
+	(DOWNLOADED AND INCLUDED AS vk_mem_alloc.h IN THIS PROJECT)
+	*/
 
 	// data for the creation of the vertex buffer
 	// size depends on the vertices vector size multiplied by the size of the Vertex data type
@@ -413,7 +462,7 @@ void RenderPipeline::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, V
 	allocInfo.allocationSize = memReqs.size;
 	allocInfo.memoryTypeIndex = pDevice->findPhysicalMemoryType(memReqs.memoryTypeBits, properties);
 
-	std::cout << "Allocating memory per-object. This is subject to change." << std::endl;
+	std::cout << "Allocating buffer memory per-object. This is subject to change." << std::endl;
 
 	if (vkAllocateMemory(pDevice->vkDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create buffer memory!");
@@ -427,10 +476,10 @@ void RenderPipeline::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, V
 
 void RenderPipeline::createVertexBuffer() {
 	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-	
+
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	createBuffer(bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+	createBuffer_WithOwnMemory(bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
 	// offset still hard-coded to 0; bufferInfo.size is the amount of data read from the buffer when drawing
 	// it is possible to supply a special handle VK_WHOLE_SIZE to map all of the memory
@@ -442,15 +491,40 @@ void RenderPipeline::createVertexBuffer() {
 	memcpy(data, vertices.data(), (size_t)bufferSize);
 	vkUnmapMemory(pDevice->vkDevice, stagingBufferMemory);
 
-	createBuffer(bufferSize, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+	createBuffer_WithOwnMemory(bufferSize, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
 
-	copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+	copyBuffer_UsingOwnQueue(stagingBuffer, vertexBuffer, bufferSize);
 
 	vkDestroyBuffer(pDevice->vkDevice, stagingBuffer, nullptr);
 	vkFreeMemory(pDevice->vkDevice, stagingBufferMemory, nullptr);
 }
 
-void RenderPipeline::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+void RenderPipeline::createIndexBuffer() {
+	VkDeviceSize bufferSize = sizeof(vertexIndices[0]) * vertexIndices.size();
+
+	// staging buffer
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	createBuffer_WithOwnMemory(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+	// copy vertex indices into 'data' and unmap the used memory
+	void* data;
+	vkMapMemory(pDevice->vkDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, vertexIndices.data(), (size_t)bufferSize);
+	vkUnmapMemory(pDevice->vkDevice, stagingBufferMemory);
+
+	// index buffer
+	createBuffer_WithOwnMemory(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+
+	// transfer index data to device local memory
+	copyBuffer_UsingOwnQueue(stagingBuffer, indexBuffer, bufferSize);
+
+	// clean up staging buffer
+	vkDestroyBuffer(pDevice->vkDevice, stagingBuffer, nullptr);
+	vkFreeMemory(pDevice->vkDevice, stagingBufferMemory, nullptr);
+}
+
+void RenderPipeline::copyBuffer_UsingOwnQueue(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -467,8 +541,8 @@ void RenderPipeline::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDevice
 	vkBeginCommandBuffer(transferBuffer, &beginInfo);
 
 	VkBufferCopy copyRegion = {};
-	copyRegion.srcOffset = 0; // optional
-	copyRegion.dstOffset = 0; // optional
+	copyRegion.srcOffset = 0; // optional - used for buffers with many parts
+	copyRegion.dstOffset = 0; // optional - used for buffers with many parts
 	copyRegion.size = size;
 
 	vkCmdCopyBuffer(transferBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
@@ -481,14 +555,105 @@ void RenderPipeline::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDevice
 	submitInfo.pCommandBuffers = &transferBuffer;
 
 	vkQueueSubmit(pDevice->transferQueue, 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(pDevice->transferQueue);
 
+	vkQueueWaitIdle(pDevice->transferQueue);
 	vkFreeCommandBuffers(pDevice->vkDevice, transferCommandPool, 1, &transferBuffer);
 }
 
-void RenderPipeline::createCommandBuffers() {
-	
+void RenderPipeline::createUniformBuffers() {
+	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
+	uniformBuffers.resize(pDevice->swapChainImages.size());
+	uniformBuffersMemory.resize(pDevice->swapChainImages.size());
+
+	for (size_t i = 0; i < pDevice->swapChainImages.size(); i++) {
+		createBuffer_WithOwnMemory(
+			bufferSize,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			uniformBuffers[i],
+			uniformBuffersMemory[i]
+		);
+	}
+}
+
+void RenderPipeline::updateUniformBuffer(uint32_t currentImage, GameContext gameContext) {
+	float time = (float)gameContext.time.elapsed();
+	float aspectRatio = pDevice->swapChainExtent.width / (float)pDevice->swapChainExtent.height;
+	UniformBufferObject ubo = {};
+	// rotate unit matrix by time*radians, around the up vector
+	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	// look from vec3 point, towards vec3 point, using vec3 vector as up
+	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	// perspective matrix with y-axis FOV, aspect ratio, near plane and far plane
+	ubo.proj = glm::perspective(glm::radians(45.0f), pDevice->swapChainExtent.width / (float)pDevice->swapChainExtent.height, 0.1f, 10.0f);
+	// GLM is designed for OpenGL, where y-coordinate for clip plane was inverted
+	ubo.proj[1][1] *= -1;
+
+	void* data;
+	vkMapMemory(pDevice->vkDevice, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
+	memcpy(data, &ubo, sizeof(ubo));
+	vkUnmapMemory(pDevice->vkDevice, uniformBuffersMemory[currentImage]);
+}
+
+void RenderPipeline::createDescriptorPool() {
+	VkDescriptorPoolSize poolSize = {};
+	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSize.descriptorCount = static_cast<uint32_t>(pDevice->swapChainImages.size());
+
+	VkDescriptorPoolCreateInfo poolInfo = {};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.poolSizeCount = 1; // one descriptor each frame
+	poolInfo.pPoolSizes = &poolSize;
+	poolInfo.maxSets = static_cast<uint32_t>(pDevice->swapChainImages.size());
+
+	if (vkCreateDescriptorPool(pDevice->vkDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create descriptor pool!");
+	}
+}
+
+void RenderPipeline::createDescriptorSets() {
+	std::vector<VkDescriptorSetLayout> layouts(pDevice->swapChainImages.size(), descriptorSetLayout);
+
+	VkDescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = descriptorPool;
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(pDevice->swapChainImages.size());
+	allocInfo.pSetLayouts = layouts.data();
+
+	descriptorSets.resize(pDevice->swapChainImages.size());
+
+#ifdef _DEBUG
+	std::cout << "DescriptorSets size: " << descriptorSets.size() << std::endl;
+	std::cout << "allocInfo.descriptorSetCount: " << allocInfo.descriptorSetCount << std::endl;
+#endif
+
+	if (vkAllocateDescriptorSets(pDevice->vkDevice, &allocInfo, &descriptorSets[0]) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate descriptor set!");
+	}
+
+	for (size_t i = 0; i < pDevice->swapChainImages.size(); i++) {
+		VkDescriptorBufferInfo bufferInfo = {};
+		bufferInfo.buffer = uniformBuffers[i];
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformBufferObject);
+
+		VkWriteDescriptorSet descriptorWrite = {};
+		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = descriptorSets[i];
+		descriptorWrite.dstBinding = 0;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.pBufferInfo = &bufferInfo;
+		descriptorWrite.pImageInfo = nullptr; // optional
+		descriptorWrite.pTexelBufferView = nullptr; // optional
+
+		vkUpdateDescriptorSets(pDevice->vkDevice, 1, &descriptorWrite, 0, nullptr);
+	}
+}
+
+void RenderPipeline::createCommandBuffers(VkIndexType indexType) {
 #ifdef _DEBUG
 	std::cout << "swap chain frame buffers size: " << swapChainFramebuffers.size() << std::endl;
 #endif
@@ -552,8 +717,14 @@ void RenderPipeline::createCommandBuffers() {
 		// current command buffer, offset, number of bindings, array of vBuffers, array of mem offsets
 		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-		// (command buffers, vertex count, instance count (for instanced rendering), first vertex count, first instance count
-		vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+		// bind the index buffer
+		vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, indexType);
+
+		// descriptor sets - i.e. mvp matrix. Bind explicitly to the the graphics pipeline.
+		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
+
+		// draw vertices based on the vertex indices
+		vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(vertexIndices.size()), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffers[i]);
 

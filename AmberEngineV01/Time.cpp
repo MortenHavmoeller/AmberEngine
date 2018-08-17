@@ -21,6 +21,10 @@ double Time::now() {
 	return lastRecordedTime;
 }
 
+double Time::elapsed() {
+	return lastRecordedTime - firstRecordedTime;
+}
+
 double Time::delta() {
 	if (fixedTime_) {
 		return targetDelta_;

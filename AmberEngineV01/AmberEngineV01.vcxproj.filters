@@ -81,6 +81,15 @@
     <ClInclude Include="vk_mem_alloc.h">
       <Filter>Header Files\VulkanObjects</Filter>
     </ClInclude>
+    <ClInclude Include="Contexts.h">
+      <Filter>Header Files\VulkanObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="VulkanHeader.h">
+      <Filter>Header Files\VulkanObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="UniformBufferObject.h">
+      <Filter>Header Files\VulkanObjects</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

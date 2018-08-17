@@ -154,6 +154,8 @@
   <ItemGroup>
     <ClInclude Include="AmbEnums.h" />
     <ClInclude Include="Component.h" />
+    <ClInclude Include="Contexts.h" />
+    <ClInclude Include="UniformBufferObject.h" />
     <ClInclude Include="QueueFamilyIndices.h" />
     <ClInclude Include="RenderDevice.h" />
     <ClInclude Include="Entity.h" />
@@ -166,6 +168,7 @@
     <ClInclude Include="Time.h" />
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="vk_mem_alloc.h" />
+    <ClInclude Include="VulkanHeader.h" />
     <ClInclude Include="VulkanStructs.h" />
     <ClInclude Include="WindowView.h" />
     <ClInclude Include="stdafx.h" />

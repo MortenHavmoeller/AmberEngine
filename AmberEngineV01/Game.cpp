@@ -1,17 +1,9 @@
 #include "stdafx.h"
 #include "Game.h"
-
 #include <thread>
 #include <chrono>
 
 int Game::run() {
-	WindowView windowView;
-	RenderDevice renderDevice;
-	RenderPipeline renderPipeline;
-
-	World world;
-	Time time;
-
 	std::cout << "Game application type: " << AmbEnums::getAmbAppTypeName(ambAppType) << std::endl;
 
 	try {
@@ -19,14 +11,16 @@ int Game::run() {
 		renderDevice.create(&windowView);
 		renderPipeline.create(&windowView, &renderDevice);
 
-		time.init(50.0, true);
+		GameContext gameContext(*this, time);
+
+		time.init(60, true);
 
 		while (!glfwWindowShouldClose(windowView.window)) {
 			time.startOfFrame();
 
 			glfwPollEvents(); // check window events
 			world.update(); // game state update; currently empty
-			renderPipeline.drawFrame(); // render to screen
+			renderPipeline.drawFrame(gameContext); // render to screen
 
 			time.frameOperationsDone();
 

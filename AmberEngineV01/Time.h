@@ -11,6 +11,7 @@ public:
 
 	double beginning();
 	double now();
+	double elapsed();
 	double delta();
 
 	void init(double targetFramerate, bool fixed);

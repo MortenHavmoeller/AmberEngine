@@ -9,23 +9,21 @@
 #include "World.h"
 #include "AmbEnums.h"
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
-#include <iostream>
-#include <cstdlib>
-
 class Game
 {
 public:
-	Game(AmbAppType type) : ambAppType(type) {}
+	Game() { ambAppType = AmbAppType::APPLICATION_TYPE_UNDEFINED; }
+	Game(AmbAppType ambAppTypeArg) : ambAppType(ambAppTypeArg) {}
 	~Game() {}
 
 	AmbAppType ambAppType;
+
+	WindowView windowView;
+	RenderDevice renderDevice;
+	RenderPipeline renderPipeline;
+
+	World world;
+	Time time;
 
 	int run();
 };
