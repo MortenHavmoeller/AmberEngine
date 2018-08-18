@@ -105,7 +105,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\libraries\VulkanSDK\1.1.73.0\Include;$(SolutionDir)\libraries\glfw-3.2.1.bin.WIN64\include-custom-vc2017;$(SolutionDir)\libraries\glm-0.9.9.0;D:\GitProjects\ProjectAmber\AmberEngine\libraries\mathfu-1.1.0\include;D:\GitProjects\ProjectAmber\AmberEngine\libraries\stb-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\libraries\VulkanSDK\1.1.73.0\Include;$(SolutionDir)\libraries\glfw-3.2.1.bin.WIN64\include-custom-vc2017;$(SolutionDir)\libraries\glm-0.9.9.0;$(SolutionDir)\libraries\mathfu-1.1.0\include;$(SolutionDir)\libraries\stb-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -140,7 +140,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\libraries\VulkanSDK\1.1.73.0\Include;$(SolutionDir)\libraries\glfw-3.2.1.bin.WIN64\include-custom-vc2017;$(SolutionDir)\libraries\glm-0.9.9.0;D:\GitProjects\ProjectAmber\AmberEngine\libraries\mathfu-1.1.0\include;D:\GitProjects\ProjectAmber\AmberEngine\libraries\stb-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\libraries\VulkanSDK\1.1.73.0\Include;$(SolutionDir)\libraries\glfw-3.2.1.bin.WIN64\include-custom-vc2017;$(SolutionDir)\libraries\glm-0.9.9.0;$(SolutionDir)\libraries\mathfu-1.1.0\include;$(SolutionDir)\libraries\stb-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
