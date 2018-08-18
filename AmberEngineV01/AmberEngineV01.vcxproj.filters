@@ -16,11 +16,17 @@
     <Filter Include="Header Files\Enums">
       <UniqueIdentifier>{5dcfa351-c569-4964-b212-f7e85f938444}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\VulkanObjects">
+    <Filter Include="Header Files\Vulkan">
+      <UniqueIdentifier>{45e79914-cff6-45de-87cc-1481b9bd3fd9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Vulkan">
       <UniqueIdentifier>{0a3410e5-2c03-493c-95bd-e9d476c16e2c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\VulkanObjects">
-      <UniqueIdentifier>{45e79914-cff6-45de-87cc-1481b9bd3fd9}</UniqueIdentifier>
+    <Filter Include="Header Files\Vulkan\Tools">
+      <UniqueIdentifier>{3face901-ead5-4eca-9625-a43d1cefc52c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Vulkan\Tools">
+      <UniqueIdentifier>{d5e99d72-44a3-4261-a6bb-ca06d37853aa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -55,40 +61,46 @@
       <Filter>Header Files\Enums</Filter>
     </ClInclude>
     <ClInclude Include="RenderPass.h">
-      <Filter>Header Files\VulkanObjects</Filter>
+      <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="RenderPipeline.h">
-      <Filter>Header Files\VulkanObjects</Filter>
+      <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="SwapChain.h">
-      <Filter>Header Files\VulkanObjects</Filter>
+      <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="WindowView.h">
-      <Filter>Header Files\VulkanObjects</Filter>
+      <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="VulkanStructs.h">
-      <Filter>Header Files\VulkanObjects</Filter>
+      <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="RenderDevice.h">
-      <Filter>Header Files\VulkanObjects</Filter>
+      <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="Vertex.h">
       <Filter>Header Files\Enums</Filter>
     </ClInclude>
     <ClInclude Include="QueueFamilyIndices.h">
-      <Filter>Header Files\VulkanObjects</Filter>
+      <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="vk_mem_alloc.h">
-      <Filter>Header Files\VulkanObjects</Filter>
+      <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="Contexts.h">
-      <Filter>Header Files\VulkanObjects</Filter>
+      <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="VulkanHeader.h">
-      <Filter>Header Files\VulkanObjects</Filter>
+      <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="UniformBufferObject.h">
-      <Filter>Header Files\VulkanObjects</Filter>
+      <Filter>Header Files\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BufferTool.h">
+      <Filter>Header Files\Vulkan\Tools</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -120,19 +132,25 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RenderPass.cpp">
-      <Filter>Source Files\VulkanObjects</Filter>
+      <Filter>Source Files\Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="RenderPipeline.cpp">
-      <Filter>Source Files\VulkanObjects</Filter>
+      <Filter>Source Files\Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="SwapChain.cpp">
-      <Filter>Source Files\VulkanObjects</Filter>
+      <Filter>Source Files\Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="WindowView.cpp">
-      <Filter>Source Files\VulkanObjects</Filter>
+      <Filter>Source Files\Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="RenderDevice.cpp">
-      <Filter>Source Files\VulkanObjects</Filter>
+      <Filter>Source Files\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BufferTool.cpp">
+      <Filter>Source Files\Vulkan\Tools</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

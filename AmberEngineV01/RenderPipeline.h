@@ -5,6 +5,8 @@
 #include "filetool.h"
 #include "UniformBufferObject.h"
 #include "Contexts.h"
+#include "BufferTool.h"
+#include "Texture.h"
 
 #include <string>
 #include <fstream>
@@ -25,7 +27,11 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 class RenderPipeline
 {
 public:
-	
+	RenderPipeline() : texture(NULL) {}
+	~RenderPipeline() {
+		std::cout << "RenderPipeline destructor" << std::endl;
+	}
+
 	VkCommandPool transferCommandPool;
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> transferCommandBuffers;
@@ -63,6 +69,8 @@ private:
 	std::vector<VkSemaphore> renderFinishedSemaphores; // image ready for presentation to surface
 	std::vector<VkFence> inFlightFences; // fences to block CPU command submission from outrunning GPU rendering
 
+	Texture texture;
+
 	bool hasTransferCommandPool;
 
 	void createDescriptorSetLayout();
@@ -79,7 +87,6 @@ private:
 
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	
-	void createBuffer_WithOwnMemory(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void copyBuffer_UsingOwnQueue(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 	void updateUniformBuffer(uint32_t currentImage, GameContext gameContext);

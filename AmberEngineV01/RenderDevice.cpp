@@ -5,13 +5,6 @@
 #define VMA_IMPLEMENTATION // ONLY USE ONCE
 #include "vk_mem_alloc.h"
 
-RenderDevice::RenderDevice(){
-}
-
-
-RenderDevice::~RenderDevice(){
-}
-
 void RenderDevice::create(WindowView* view) {
 	pWindowView = view;
 

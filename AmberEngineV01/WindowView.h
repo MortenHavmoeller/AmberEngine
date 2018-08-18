@@ -32,6 +32,11 @@ const bool enableValidationLayers = false;
 class WindowView
 {
 public:
+	WindowView() {}
+	~WindowView() {
+		std::cout << "WindowView destructor" << std::endl;
+	}
+
 	GLFWwindow* window;
 	VkInstance instance;
 

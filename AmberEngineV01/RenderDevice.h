@@ -11,8 +11,10 @@
 class RenderDevice
 {
 public:
-	RenderDevice();
-	~RenderDevice();
+	RenderDevice() {}
+	~RenderDevice() {
+		std::cout << "RenderDevice destructor" << std::endl;
+	}
 
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkDevice vkDevice;

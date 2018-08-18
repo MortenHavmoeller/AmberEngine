@@ -24,6 +24,10 @@ void RenderPipeline::create(WindowView* view, RenderDevice* device) {
 	createGraphicsPipeline();
 	createFramebuffers();
 	createCommandPools();
+
+	CommandPoolContext cmdPoolContext(pDevice, pDevice->graphicsQueue, commandPool);
+	Texture::loadFromDisk(cmdPoolContext, texture, "../textures/dungeon_floor_tile.jpg");
+
 	createVertexBuffer();
 	createIndexBuffer();
 	createUniformBuffers();
@@ -34,6 +38,8 @@ void RenderPipeline::create(WindowView* view, RenderDevice* device) {
 };
 
 void RenderPipeline::cleanup() {
+	texture.destroy();
+
 	vkDestroyBuffer(pDevice->vkDevice, indexBuffer, nullptr);
 	vkFreeMemory(pDevice->vkDevice, indexBufferMemory, nullptr);
 
@@ -427,59 +433,12 @@ void RenderPipeline::createCommandPools() {
 	}
 }
 
-void RenderPipeline::createBuffer_WithOwnMemory(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
-
-	/* From text:
-	It should be noted that in a real world application, you’re not supposed to actually call vkAllocateMemory for every individual buffer.
-	The maximum number of simultaneous memory allocations is limited by the maxMemoryAllocationCount physical device limit,
-	which may be as low as 4096 even on high end hardware like an NVIDIA GTX 1080.
-
-	The right way to allocate memory for a large number of objects at the same time is to create a custom allocator
-	that splits up a single allocation among many different objects by using the offset parameters that we’ve seen in many functions.
-
-	You can either implement such an allocator yourself, or use the VulkanMemoryAllocator library provided by the GPUOpen initiative.
-	(DOWNLOADED AND INCLUDED AS vk_mem_alloc.h IN THIS PROJECT)
-	*/
-
-	// data for the creation of the vertex buffer
-	// size depends on the vertices vector size multiplied by the size of the Vertex data type
-	VkBufferCreateInfo bufferInfo = {};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = size;
-	bufferInfo.usage = usage;
-
-	if (vkCreateBuffer(pDevice->vkDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create a buffer!");
-	}
-
-	// get memory requirements for the just-created vertex buffer
-	VkMemoryRequirements memReqs;
-	vkGetBufferMemoryRequirements(pDevice->vkDevice, buffer, &memReqs);
-
-	// use obtained memory requirements to find the right type of memory
-	VkMemoryAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize = memReqs.size;
-	allocInfo.memoryTypeIndex = pDevice->findPhysicalMemoryType(memReqs.memoryTypeBits, properties);
-
-	std::cout << "Allocating buffer memory per-object. This is subject to change." << std::endl;
-
-	if (vkAllocateMemory(pDevice->vkDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create buffer memory!");
-	}
-
-	// last parameter is offset within the allocated region of memory
-	// this buffer is specifically for this single object, so offset is simply 0
-	// if the offset is non-zero, it must be divisible by memReqs.alignment (VkMemoryRequirements)
-	vkBindBufferMemory(pDevice->vkDevice, buffer, bufferMemory, 0);
-}
-
 void RenderPipeline::createVertexBuffer() {
 	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	createBuffer_WithOwnMemory(bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+	BufferTool::createBuffer(pDevice, bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
 	// offset still hard-coded to 0; bufferInfo.size is the amount of data read from the buffer when drawing
 	// it is possible to supply a special handle VK_WHOLE_SIZE to map all of the memory
@@ -491,9 +450,11 @@ void RenderPipeline::createVertexBuffer() {
 	memcpy(data, vertices.data(), (size_t)bufferSize);
 	vkUnmapMemory(pDevice->vkDevice, stagingBufferMemory);
 
-	createBuffer_WithOwnMemory(bufferSize, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-
-	copyBuffer_UsingOwnQueue(stagingBuffer, vertexBuffer, bufferSize);
+	// destination buffer
+	BufferTool::createBuffer(pDevice, bufferSize, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+	// copy from staging buffer into vertex buffer
+	CommandPoolContext cmdPoolContext(pDevice, pDevice->transferQueue, transferCommandPool);
+	BufferTool::copyBuffer(cmdPoolContext, stagingBuffer, vertexBuffer, bufferSize);
 
 	vkDestroyBuffer(pDevice->vkDevice, stagingBuffer, nullptr);
 	vkFreeMemory(pDevice->vkDevice, stagingBufferMemory, nullptr);
@@ -505,7 +466,7 @@ void RenderPipeline::createIndexBuffer() {
 	// staging buffer
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	createBuffer_WithOwnMemory(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+	BufferTool::createBuffer(pDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
 	// copy vertex indices into 'data' and unmap the used memory
 	void* data;
@@ -513,11 +474,11 @@ void RenderPipeline::createIndexBuffer() {
 	memcpy(data, vertexIndices.data(), (size_t)bufferSize);
 	vkUnmapMemory(pDevice->vkDevice, stagingBufferMemory);
 
-	// index buffer
-	createBuffer_WithOwnMemory(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
-
-	// transfer index data to device local memory
-	copyBuffer_UsingOwnQueue(stagingBuffer, indexBuffer, bufferSize);
+	// destination buffer
+	BufferTool::createBuffer(pDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+	// copy from staging buffer into index buffer
+	CommandPoolContext cmdPoolContext(pDevice, pDevice->transferQueue, transferCommandPool);
+	BufferTool::copyBuffer(cmdPoolContext, stagingBuffer, indexBuffer, bufferSize);
 
 	// clean up staging buffer
 	vkDestroyBuffer(pDevice->vkDevice, stagingBuffer, nullptr);
@@ -567,7 +528,8 @@ void RenderPipeline::createUniformBuffers() {
 	uniformBuffersMemory.resize(pDevice->swapChainImages.size());
 
 	for (size_t i = 0; i < pDevice->swapChainImages.size(); i++) {
-		createBuffer_WithOwnMemory(
+		BufferTool::createBuffer(
+			pDevice,
 			bufferSize,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,

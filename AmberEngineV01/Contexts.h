@@ -14,3 +14,14 @@ public:
 private:
 
 };
+
+class CommandPoolContext {
+public:
+	CommandPoolContext(RenderDevice* pDeviceArg, VkQueue& queueArg, VkCommandPool& commandPoolArg) :
+		pDevice(pDeviceArg), queue(queueArg), commandPool(commandPoolArg) {}
+	~CommandPoolContext() {}
+
+	RenderDevice* pDevice;
+	VkQueue& queue;
+	VkCommandPool& commandPool;
+};
