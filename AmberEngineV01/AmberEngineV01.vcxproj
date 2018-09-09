@@ -152,10 +152,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AmbBuffer.h" />
     <ClInclude Include="AmbEnums.h" />
     <ClInclude Include="BufferTool.h" />
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="Contexts.h" />
+    <ClInclude Include="GlmHeader.h" />
+    <ClInclude Include="InputManager.h" />
+    <ClInclude Include="Object3D.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="UniformBufferObject.h" />
     <ClInclude Include="QueueFamilyIndices.h" />
@@ -178,8 +183,12 @@
     <ClInclude Include="World.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AmbBuffer.cpp" />
     <ClCompile Include="BufferTool.cpp" />
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Component.cpp" />
+    <ClCompile Include="InputManager.cpp" />
+    <ClCompile Include="Object3D.cpp" />
     <ClCompile Include="RenderDevice.cpp" />
     <ClCompile Include="Entity.cpp" />
     <ClCompile Include="filetool.cpp" />

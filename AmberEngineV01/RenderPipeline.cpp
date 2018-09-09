@@ -103,7 +103,7 @@ void RenderPipeline::recreate() {
 	createCommandBuffers(VK_INDEX_TYPE_UINT16);
 }
 
-void RenderPipeline::drawFrame(GameContext gameContext) {
+void RenderPipeline::drawFrame(Camera& camera, GameContext gameContext) {
 	uint64_t uint64max = (std::numeric_limits<uint64_t>::max)();
 
 	// wait for a fence to become signaled; fences are signaled as drawing operations finish
@@ -125,7 +125,7 @@ void RenderPipeline::drawFrame(GameContext gameContext) {
 		throw std::runtime_error("failed to acquire swap chain image!");
 	}
 
-	updateUniformBuffer(imageIndex, gameContext);
+	updateUniformBuffer(camera, imageIndex, gameContext);
 
 	// submitting the command buffer
 	VkSubmitInfo submitInfo = {};
@@ -485,41 +485,41 @@ void RenderPipeline::createIndexBuffer() {
 	vkFreeMemory(pDevice->vkDevice, stagingBufferMemory, nullptr);
 }
 
-void RenderPipeline::copyBuffer_UsingOwnQueue(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-	VkCommandBufferAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandPool = transferCommandPool;
-	allocInfo.commandBufferCount = 1;
-
-	VkCommandBuffer transferBuffer;
-	vkAllocateCommandBuffers(pDevice->vkDevice, &allocInfo, &transferBuffer);
-
-	VkCommandBufferBeginInfo beginInfo = {};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-	vkBeginCommandBuffer(transferBuffer, &beginInfo);
-
-	VkBufferCopy copyRegion = {};
-	copyRegion.srcOffset = 0; // optional - used for buffers with many parts
-	copyRegion.dstOffset = 0; // optional - used for buffers with many parts
-	copyRegion.size = size;
-
-	vkCmdCopyBuffer(transferBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-	vkEndCommandBuffer(transferBuffer);
-
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &transferBuffer;
-
-	vkQueueSubmit(pDevice->transferQueue, 1, &submitInfo, VK_NULL_HANDLE);
-
-	vkQueueWaitIdle(pDevice->transferQueue);
-	vkFreeCommandBuffers(pDevice->vkDevice, transferCommandPool, 1, &transferBuffer);
-}
+//void RenderPipeline::copyBuffer_UsingOwnQueue(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+//	VkCommandBufferAllocateInfo allocInfo = {};
+//	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+//	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+//	allocInfo.commandPool = transferCommandPool;
+//	allocInfo.commandBufferCount = 1;
+//
+//	VkCommandBuffer transferBuffer;
+//	vkAllocateCommandBuffers(pDevice->vkDevice, &allocInfo, &transferBuffer);
+//
+//	VkCommandBufferBeginInfo beginInfo = {};
+//	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+//	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+//
+//	vkBeginCommandBuffer(transferBuffer, &beginInfo);
+//
+//	VkBufferCopy copyRegion = {};
+//	copyRegion.srcOffset = 0; // optional - used for buffers with many parts
+//	copyRegion.dstOffset = 0; // optional - used for buffers with many parts
+//	copyRegion.size = size;
+//
+//	vkCmdCopyBuffer(transferBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+//
+//	vkEndCommandBuffer(transferBuffer);
+//
+//	VkSubmitInfo submitInfo = {};
+//	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+//	submitInfo.commandBufferCount = 1;
+//	submitInfo.pCommandBuffers = &transferBuffer;
+//
+//	vkQueueSubmit(pDevice->transferQueue, 1, &submitInfo, VK_NULL_HANDLE);
+//
+//	vkQueueWaitIdle(pDevice->transferQueue);
+//	vkFreeCommandBuffers(pDevice->vkDevice, transferCommandPool, 1, &transferBuffer);
+//}
 
 void RenderPipeline::createUniformBuffers() {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
@@ -539,14 +539,15 @@ void RenderPipeline::createUniformBuffers() {
 	}
 }
 
-void RenderPipeline::updateUniformBuffer(uint32_t currentImage, GameContext gameContext) {
+void RenderPipeline::updateUniformBuffer(Camera& camera, uint32_t currentImage, GameContext gameContext) {
 	float time = (float)gameContext.time.elapsed();
 	float aspectRatio = pDevice->swapChainExtent.width / (float)pDevice->swapChainExtent.height;
 	UniformBufferObject ubo = {};
 	// rotate unit matrix by time*radians, around the up vector
 	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	// look from vec3 point, towards vec3 point, using vec3 vector as up
-	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	
+	ubo.view = glm::lookAt(camera.pos, glm::vec3(0.0f, 0.0f, 0.0f), camera.up());
+
 	// perspective matrix with y-axis FOV, aspect ratio, near plane and far plane
 	ubo.proj = glm::perspective(glm::radians(45.0f), pDevice->swapChainExtent.width / (float)pDevice->swapChainExtent.height, 0.1f, 10.0f);
 	// GLM is designed for OpenGL, where y-coordinate for clip plane was inverted

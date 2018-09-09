@@ -7,6 +7,7 @@
 #include "Contexts.h"
 #include "BufferTool.h"
 #include "Texture.h"
+#include "Camera.h"
 
 #include <string>
 #include <fstream>
@@ -14,9 +15,11 @@
 #include <filesystem>
 #include <cstdlib>
 
-#define GLM_FORCE_RADIANS
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include "GlmHeader.h"
+
+//#define GLM_FORCE_RADIANS
+//#include <glm/glm.hpp>
+//#include <glm/gtc/matrix_transform.hpp>
 
 #include <chrono>
 
@@ -42,7 +45,7 @@ public:
 
 	void recreate();
 
-	void drawFrame(GameContext gameContext);
+	void drawFrame(Camera& camera, GameContext gameContext);
 
 private:
 	WindowView* pWindowView;
@@ -87,8 +90,6 @@ private:
 
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	
-	void copyBuffer_UsingOwnQueue(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-
-	void updateUniformBuffer(uint32_t currentImage, GameContext gameContext);
+	void updateUniformBuffer(Camera& camera, uint32_t currentImage, GameContext gameContext);
 };
 

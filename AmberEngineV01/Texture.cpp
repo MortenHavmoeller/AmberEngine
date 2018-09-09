@@ -62,10 +62,6 @@ void Texture::loadFromDisk(CommandPoolContext& cmdPoolContext, Texture& texture,
 
 	vkDestroyBuffer(cmdPoolContext.pDevice->vkDevice, stagingBuffer, nullptr);
 	vkFreeMemory(cmdPoolContext.pDevice->vkDevice, stagingBufferMemory, nullptr);
-	std::cout << "Texture removed own buffers..." << std::endl;
-	
-	// TODO somehow destructor is called twice upon returning
-	//return texture;
 }
 
 void Texture::createImage(RenderDevice* pDevice, uint32_t widthArg, uint32_t heightArg, VkFormat formatArg, VkImageTiling tilingArg, VkImageUsageFlags usage, VkMemoryPropertyFlags properties)
@@ -182,7 +178,7 @@ void Texture::copyBufferToImage(CommandPoolContext& cmdPoolContext, VkBuffer buf
 		commandBuffer,
 		buffer,
 		image,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // assume image is already in a format optimal for destination
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // [dstImageLayout]: assume image is already in a format optimal for destination
 		1,
 		&region
 	);

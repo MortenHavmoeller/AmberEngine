@@ -1,13 +1,14 @@
 #pragma once
-#include <chrono>
-#include <GLFW/glfw3.h>
-#include <stdexcept>
+
+
 
 class Time
 {
 public:
 	Time();
 	~Time();
+
+	static double exactNow();
 
 	double beginning();
 	double now();
@@ -29,5 +30,10 @@ private:
 
 	double targetFramerate_;
 	double targetDelta_;
+
+#ifdef _DEBUG
+	bool frameStartCalled_ = false;
+	bool frameOpsDoneCalled_ = false;
+#endif
 };
 

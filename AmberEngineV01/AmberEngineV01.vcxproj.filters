@@ -28,6 +28,12 @@
     <Filter Include="Source Files\Vulkan\Tools">
       <UniqueIdentifier>{d5e99d72-44a3-4261-a6bb-ca06d37853aa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\DataTypes">
+      <UniqueIdentifier>{3dbbf3de-1380-4897-8b1d-31f4f72756f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\DataTypes">
+      <UniqueIdentifier>{c166ef85-0f79-44c7-9bf5-42f4975ec841}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -102,6 +108,21 @@
     <ClInclude Include="BufferTool.h">
       <Filter>Header Files\Vulkan\Tools</Filter>
     </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GlmHeader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Object3D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="InputManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AmbBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -151,6 +172,18 @@
     </ClCompile>
     <ClCompile Include="BufferTool.cpp">
       <Filter>Source Files\Vulkan\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Object3D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="InputManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AmbBuffer.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

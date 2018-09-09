@@ -1,8 +1,11 @@
 #include "stdafx.h"
 #include "Time.h"
 
-#include <algorithm> // std::max
+#include <chrono>
+#include <GLFW/glfw3.h>
+#include <stdexcept>
 
+#include <algorithm> // std::max
 
 Time::Time()
 {
@@ -11,6 +14,10 @@ Time::Time()
 
 Time::~Time()
 {
+}
+
+double Time::exactNow() {
+	return glfwGetTime();
 }
 
 double Time::beginning() {
@@ -62,12 +69,30 @@ void Time::startOfFrame() {
 		delta_ = currentTime - lastRecordedTime;
 		lastRecordedTime = currentTime;
 	}
+
+#ifdef _DEBUG
+	frameStartCalled_ = true;
+#endif
 }
 
 void Time::frameOperationsDone() {
 	delta_ = glfwGetTime() - lastRecordedTime;
+
+#ifdef _DEBUG
+	frameOpsDoneCalled_ = true;
+#endif
 }
 
 double Time::timeUntilNextFrame() {
+#ifdef _DEBUG
+	if (!frameStartCalled_) {
+		throw std::runtime_error("Time::timeUntilNextFrame() called, but Time::startOfFrame() was never called!");
+	}
+
+	if (!frameOpsDoneCalled_) {
+		throw std::runtime_error("Time::timeUntilNextFrame() called, but Time::frameOperationsDone() was never called!");
+	}
+#endif
+
 	return std::max(targetDelta_ - delta_, 0.0);
 }

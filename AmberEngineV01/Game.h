@@ -2,12 +2,14 @@
 
 #include "stdafx.h"
 
+#include "InputManager.h"
 #include "WindowView.h"
 #include "RenderDevice.h"
 #include "RenderPipeline.h"
 #include "Time.h"
 #include "World.h"
 #include "AmbEnums.h"
+#include "Object3D.h"
 
 class Game
 {
@@ -18,6 +20,8 @@ public:
 
 	AmbAppType ambAppType;
 
+	InputManager inputManager;
+
 	WindowView windowView;
 	RenderDevice renderDevice;
 	RenderPipeline renderPipeline;
@@ -26,4 +30,7 @@ public:
 	Time time;
 
 	int run();
+
+private:
+	bool keepRunning;
 };
